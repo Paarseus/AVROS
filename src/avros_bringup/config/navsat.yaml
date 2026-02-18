@@ -1,0 +1,22 @@
+# navsat_transform_node configuration
+# Converts GPS (NavSatFix) to map frame odometry
+# Publishes map -> odom TF and /odometry/gps for EKF fusion
+
+navsat_transform_node:
+  ros__parameters:
+    frequency: 30.0
+    delay: 3.0
+
+    # Xsens MTi-680G outputs ENU (yaw=0 facing east) via ROS driver
+    # and uses internal World Magnetic Model for declination correction
+    magnetic_declination_radians: 0.0
+    yaw_offset: 0.0
+
+    zero_altitude: true
+    use_odometry_yaw: false       # Use IMU heading directly (earth-referenced)
+    wait_for_datum: false
+    publish_filtered_gps: true
+
+    # CRITICAL: Publish map -> odom transform for Nav2
+    broadcast_cartesian_transform: true
+    broadcast_cartesian_transform_as_parent_frame: true

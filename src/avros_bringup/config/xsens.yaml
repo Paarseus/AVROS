@@ -1,0 +1,55 @@
+# Xsens MTi-680G configuration
+# Package: xsens_ros_mti_driver (build from source)
+# https://github.com/xsenssupport/Xsens_MTi_ROS_Driver_and_Ntrip_Client
+
+xsens_mti_node:
+  ros__parameters:
+    # Device
+    scan_for_devices: true
+    port: "/dev/ttyUSB0"
+    baudrate: 115200
+    serial_timeout: 150            # Increase for Jetson (default 100ms)
+    frame_id: "imu_link"
+
+    # Output rate
+    enable_deviceConfig: false     # Set true ONCE to flash config, then false
+    output_data_rate: 100          # Hz
+
+    # Publishers
+    publisher_queue_size: 5
+    pub_imu: true
+    pub_quaternion: true
+    pub_euler: true
+    pub_free_acceleration: true
+    pub_angular_velocity: true
+    pub_acceleration: true
+    pub_mag: true
+    pub_dq: false
+    pub_dv: false
+    pub_pressure: false
+    pub_temperature: false
+    pub_transform: true
+    pub_status: true
+    pub_utctime: true
+    pub_sampletime: true
+
+    # GNSS (MTi-680G)
+    pub_twist: true
+    pub_gnss: true
+    pub_positionLLA: true
+    pub_velocity: true
+    pub_nmea: true
+    pub_gnsspose: true
+
+    # GNSS lever arm: antenna offset from IMU center [x, y, z] meters
+    # TODO: Measure on real vehicle
+    GNSS_LeverArm: [0.0, 0.0, 0.0]
+
+    # u-Blox platform type: 4 = Automotive
+    ublox_platform: 4
+    enable_beidou: false
+
+    # Filter options
+    enable_orientation_smoother: true
+    enable_position_velocity_smoother: true
+    enable_continuous_zero_rotation_update: true

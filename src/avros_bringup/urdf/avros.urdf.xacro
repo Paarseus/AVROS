@@ -1,0 +1,106 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="avros">
+
+  <!-- Vehicle parameters -->
+  <xacro:property name="wheelbase" value="1.23"/>
+  <xacro:property name="track_width" value="0.9"/>
+
+  <!-- ============================================================ -->
+  <!-- base_link: center of rear axle at ground level               -->
+  <!-- ============================================================ -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="${wheelbase} ${track_width} 0.4"/>
+      </geometry>
+      <origin xyz="${wheelbase/2} 0 0.3" rpy="0 0 0"/>
+      <material name="grey">
+        <color rgba="0.5 0.5 0.5 0.8"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="${wheelbase} ${track_width} 0.4"/>
+      </geometry>
+      <origin xyz="${wheelbase/2} 0 0.3" rpy="0 0 0"/>
+    </collision>
+    <inertial>
+      <mass value="150.0"/>
+      <inertia ixx="10.0" ixy="0" ixz="0" iyy="20.0" iyz="0" izz="25.0"/>
+    </inertial>
+  </link>
+
+  <!-- ============================================================ -->
+  <!-- base_footprint: ground projection of base_link               -->
+  <!-- ============================================================ -->
+  <link name="base_footprint"/>
+  <joint name="base_footprint_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="base_footprint"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ============================================================ -->
+  <!-- IMU: Xsens MTi-680G                                         -->
+  <!-- TODO: Measure exact mount position on real vehicle           -->
+  <!-- ============================================================ -->
+  <link name="imu_link">
+    <visual>
+      <geometry>
+        <box size="0.06 0.06 0.03"/>
+      </geometry>
+      <material name="blue">
+        <color rgba="0 0 0.8 1"/>
+      </material>
+    </visual>
+  </link>
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <!-- TODO: Measure on vehicle. Approximate: centered, roof height -->
+    <origin xyz="0.6 0.0 0.8" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ============================================================ -->
+  <!-- LiDAR: Velodyne VLP-16                                      -->
+  <!-- TODO: Measure exact mount position on real vehicle           -->
+  <!-- ============================================================ -->
+  <link name="velodyne">
+    <visual>
+      <geometry>
+        <cylinder radius="0.052" length="0.072"/>
+      </geometry>
+      <material name="dark_grey">
+        <color rgba="0.3 0.3 0.3 1"/>
+      </material>
+    </visual>
+  </link>
+  <joint name="velodyne_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="velodyne"/>
+    <!-- TODO: Measure on vehicle. Approximate: centered, above roof -->
+    <origin xyz="0.6 0.0 1.0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ============================================================ -->
+  <!-- Camera: Intel RealSense D435i                                -->
+  <!-- TODO: Measure exact mount position on real vehicle           -->
+  <!-- ============================================================ -->
+  <link name="camera_link">
+    <visual>
+      <geometry>
+        <box size="0.025 0.09 0.025"/>
+      </geometry>
+      <material name="silver">
+        <color rgba="0.75 0.75 0.75 1"/>
+      </material>
+    </visual>
+  </link>
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <!-- TODO: Measure on vehicle. Approximate: front, roof height -->
+    <origin xyz="1.0 0.0 0.8" rpy="0 0 0"/>
+  </joint>
+
+</robot>

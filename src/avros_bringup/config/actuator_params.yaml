@@ -1,0 +1,21 @@
+actuator_node:
+  ros__parameters:
+    # Teensy UDP connection
+    teensy_ip: "192.168.13.177"
+    teensy_port: 5005
+    keepalive_interval: 0.2
+
+    # Vehicle geometry
+    wheelbase: 1.23
+    max_steering_rad: 0.489        # 28 degrees
+    steering_sign: -1              # Hardware sign convention
+
+    # Speed PID (linear.x -> throttle/brake)
+    pid_kp: 0.55
+    pid_ki: 0.055
+    pid_kd: 0.08
+    max_throttle: 0.6              # Safety limit
+
+    # Timing
+    cmd_vel_timeout: 0.5           # E-stop if no cmd_vel for this long
+    control_rate: 20.0             # Hz

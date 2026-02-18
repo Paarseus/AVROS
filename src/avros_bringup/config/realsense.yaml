@@ -1,0 +1,24 @@
+# Intel RealSense D435i configuration
+# Package: ros-humble-realsense2-camera (apt)
+# On Jetson: build librealsense2 from source with -DBUILD_WITH_CUDA=true
+# then build realsense-ros from source against it
+# Kernel patching: use jetsonhacks/jetson-orin-librealsense prebuilt modules
+
+camera:
+  ros__parameters:
+    camera_name: "camera"
+    camera_namespace: ""
+    base_frame_id: "camera_link"
+    enable_color: true
+    enable_depth: true
+    enable_infra1: false
+    enable_infra2: false
+    enable_gyro: false
+    enable_accel: false
+    enable_sync: true
+    depth_module.profile: "1280x720x30"
+    rgb_camera.color_profile: "1280x720x30"
+    align_depth.enable: true
+    pointcloud.enable: false
+    publish_tf: true
+    tf_publish_rate: 0.0           # Static TF only
