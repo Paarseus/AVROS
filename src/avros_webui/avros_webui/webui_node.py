@@ -168,7 +168,11 @@ def create_app(node: WebUINode) -> FastAPI:
             response.headers['Cache-Control'] = 'no-store'
         return response
 
-    app.mount('/static', StaticFiles(directory=static_dir), name='static')
+    app.mount(
+        '/static',
+        StaticFiles(directory=static_dir, follow_symlink=True),
+        name='static',
+    )
 
     return app
 
