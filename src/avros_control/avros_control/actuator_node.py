@@ -119,7 +119,9 @@ class ActuatorNode(Node):
         self._estop = False
         self._watchdog_active = False
         self._last_cmd_vel_time = self.get_clock().now()
-        self._last_actuator_cmd_time = rclpy.time.Time()  # epoch 0 = never
+        self._last_actuator_cmd_time = rclpy.time.Time(
+            clock_type=self.get_clock().clock_type
+        )  # epoch 0 = never
         self._last_linear_x = 0.0
 
         # Actual state from Teensy response
