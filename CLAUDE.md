@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Migration of the AV2.1-API autonomous vehicle codebase to ROS2 (Humble/Jazzy). Four custom packages + upstream drivers (Velodyne, RealSense, Xsens) + Nav2 + robot_localization.
+Migration of the AV2.1-API autonomous vehicle codebase to ROS2 (Humble/Jazzy). Five custom packages + upstream drivers (Velodyne, RealSense, Xsens) + Nav2 + robot_localization.
 
 **Source:** `~/AV2.1-API`
 **Build:** `cd ~/AVROS && colcon build --symlink-install`
@@ -33,6 +33,10 @@ ros2 launch avros_bringup localization.launch.py
 ros2 launch avros_bringup teleop.launch.py
 # Keys: i=forward, ,=backward, j=left, l=right, k=stop, q/z=speed up/down
 
+# Phone web UI (bench test — proportional joystick + mode buttons)
+ros2 launch avros_bringup webui.launch.py
+# Open https://<jetson-ip>:8000 on phone (accept self-signed cert)
+
 # Full autonomous stack
 ros2 launch avros_bringup navigation.launch.py
 
@@ -60,6 +64,8 @@ AVROS/
 │   │   ├── urdf/            # avros.urdf.xacro
 │   │   └── rviz/            # avros.rviz
 │   ├── avros_control/       # ament_python — actuator_node (cmd_vel → Teensy UDP)
+│   ├── avros_webui/         # ament_python — webui_node (phone joystick → ActuatorCommand)
+│   │   └── static/          # index.html, app.js (nipplejs joystick UI)
 │   └── avros_navigation/    # ament_python — route_planner_node (OSMnx → Nav2)
 ├── firmware/                # Teensy CAN code (unchanged from AV2.1-API)
 └── docs/
@@ -74,6 +80,7 @@ AVROS/
 | `avros_msgs` | ament_cmake | ActuatorCommand.msg, ActuatorState.msg, PlanRoute.srv |
 | `avros_bringup` | ament_python | Launch files, URDF, all YAML configs, RViz config |
 | `avros_control` | ament_python | `actuator_node`: cmd_vel → PID → Ackermann inverse → Teensy UDP |
+| `avros_webui` | ament_python | `webui_node`: phone joystick WebSocket → ActuatorCommand (direct control) |
 | `avros_navigation` | ament_python | `route_planner_node`: GPS → OSMnx route → Nav2 waypoints |
 
 No `avros_sensors` — upstream drivers (velodyne, realsense2_camera, xsens_mti_driver) used directly.
@@ -104,7 +111,7 @@ Sensor mount positions in URDF are approximate — measure on real vehicle.
 |-------|------|--------|
 | `/cmd_vel` | `geometry_msgs/Twist` | Nav2 controller |
 | `/avros/actuator_state` | `avros_msgs/ActuatorState` | actuator_node @ 20Hz |
-| `/avros/actuator_command` | `avros_msgs/ActuatorCommand` | e-stop override |
+| `/avros/actuator_command` | `avros_msgs/ActuatorCommand` | webui_node (direct control) / e-stop |
 | `/avros/route_waypoints` | `nav_msgs/Path` | route_planner_node |
 | `/velodyne_points` | `sensor_msgs/PointCloud2` | velodyne driver |
 | `/imu/data` | `sensor_msgs/Imu` | xsens driver |
@@ -155,6 +162,23 @@ A E=0 T=0.500 M=D B=0.000 S=0.100    # all-in-one command
 | `control/ackermann_vehicle.py` | `avros_control/actuator_node.py` (Ackermann inverse) |
 | `planning/navigator.py` | `avros_navigation/route_planner_node.py` (OSMnx routing) |
 | `config/default.yaml` | Split into per-component YAML in `avros_bringup/config/` |
+| `webui/server_standalone.py` | `avros_webui/webui_node.py` (ROS2 ActuatorCommand instead of raw UDP) |
+| `webui/static/` | `avros_webui/static/` (voice features removed) |
+
+## Web UI (avros_webui)
+
+Phone-based joystick controller for bench testing. FastAPI + WebSocket + nipplejs.
+
+- **Launch:** `ros2 launch avros_bringup webui.launch.py`
+- **URL:** `https://<jetson-ip>:8000` (self-signed cert)
+- **Control path:** phone joystick → WebSocket → webui_node → `/avros/actuator_command` → actuator_node → Teensy UDP
+- **Priority:** ActuatorCommand (direct) takes precedence over cmd_vel (PID). When webui stops publishing, timeout expires and Nav2's cmd_vel takes over.
+- **Safety:** WebSocket disconnect → e-stop published automatically
+- **Features:** proportional joystick (throttle/brake/steer), E-STOP button, drive mode buttons (N/D/S/R), live telemetry from ActuatorState
+- **SSL setup:** `mkdir -p ~/avros_certs && openssl req -x509 -newkey rsa:2048 -keyout ~/avros_certs/key.pem -out ~/avros_certs/cert.pem -days 365 -nodes -subj '/CN=AVROS'`
+- **Pip deps:** `pip install fastapi uvicorn[standard] websockets`
+
+---
 
 ## Replaced by Upstream
 

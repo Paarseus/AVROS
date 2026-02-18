@@ -7,7 +7,7 @@ Ports logic from AV2.1-API:
 
 Subscribes:
   /cmd_vel                  geometry_msgs/Twist
-  /avros/actuator_command   avros_msgs/ActuatorCommand (e-stop override)
+  /avros/actuator_command   avros_msgs/ActuatorCommand (direct control / e-stop)
 
 Publishes:
   /avros/actuator_state     avros_msgs/ActuatorState @ 20Hz
@@ -119,6 +119,7 @@ class ActuatorNode(Node):
         self._estop = False
         self._watchdog_active = False
         self._last_cmd_vel_time = self.get_clock().now()
+        self._last_actuator_cmd_time = rclpy.time.Time()  # epoch 0 = never
         self._last_linear_x = 0.0
 
         # Actual state from Teensy response
@@ -182,7 +183,8 @@ class ActuatorNode(Node):
             pass  # keep current mode
 
     def _actuator_cmd_callback(self, msg: ActuatorCommand):
-        """Handle direct actuator commands (e-stop override)."""
+        """Handle direct actuator commands (direct control / e-stop)."""
+        self._last_actuator_cmd_time = self.get_clock().now()
         if msg.estop:
             self._estop = True
             self._throttle = 0.0
@@ -198,20 +200,27 @@ class ActuatorNode(Node):
                 self._mode = msg.mode
 
     def _control_loop(self):
-        """Main control loop at control_rate Hz."""
+        """Main control loop at control_rate Hz.
+
+        Priority:
+          1. Fresh ActuatorCommand (< timeout) → direct control, skip PID
+          2. Fresh cmd_vel (< timeout)         → PID speed control
+          3. Neither                           → brake to stop
+        """
         now = self.get_clock().now()
 
-        # Check cmd_vel timeout
-        dt_since_cmd = (now - self._last_cmd_vel_time).nanoseconds / 1e9
-        if dt_since_cmd > self._cmd_vel_timeout:
-            # No cmd_vel received — brake to stop
-            self._throttle = 0.0
-            self._brake = 1.0
-            self._steer = 0.0
+        dt_since_actuator_cmd = (
+            (now - self._last_actuator_cmd_time).nanoseconds / 1e9
+        )
+        dt_since_cmd_vel = (
+            (now - self._last_cmd_vel_time).nanoseconds / 1e9
+        )
+
+        if dt_since_actuator_cmd < self._cmd_vel_timeout:
+            # Direct control path — values already set by callback
             self._speed_pid.reset()
-        else:
-            # PID speed control: error = desired_speed - 0 (no odometry feedback yet)
-            # When odometry is available, replace 0 with actual speed
+        elif dt_since_cmd_vel < self._cmd_vel_timeout:
+            # PID speed control: error = desired_speed - 0 (no odometry yet)
             pid_output = self._speed_pid.compute(self._last_linear_x, self._dt)
 
             if pid_output >= 0:
@@ -220,6 +229,12 @@ class ActuatorNode(Node):
             else:
                 self._throttle = 0.0
                 self._brake = min(abs(pid_output), 1.0)
+        else:
+            # No commands — brake to stop
+            self._throttle = 0.0
+            self._brake = 1.0
+            self._steer = 0.0
+            self._speed_pid.reset()
 
         # Send to Teensy
         self._send_all()
