@@ -14,6 +14,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable
 from launch.substitutions import Command, LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
@@ -41,7 +42,9 @@ def generate_launch_description():
             package='robot_state_publisher',
             executable='robot_state_publisher',
             parameters=[{
-                'robot_description': Command(['xacro ', urdf_file]),
+                'robot_description': ParameterValue(
+                    Command(['xacro ', urdf_file]), value_type=str
+                ),
                 'use_sim_time': LaunchConfiguration('use_sim_time'),
             }],
             output='screen',
