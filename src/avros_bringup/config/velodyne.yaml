@@ -1,11 +1,10 @@
 # Velodyne VLP-16 configuration
 # Package: ros-humble-velodyne (apt install)
-# Sensor default IP: 192.168.1.201
-# Host must be on 192.168.1.x subnet (e.g., 192.168.1.100)
+# Sensor reconfigured to 192.168.13.11 (same subnet as Jetson)
 
 velodyne_driver_node:
   ros__parameters:
-    device_ip: "192.168.1.201"     # Factory default sensor IP
+    device_ip: "192.168.13.11"     # Reconfigured from factory 192.168.1.201
     port: 2368                     # Factory default data port
     model: "VLP16"
     rpm: 600.0
