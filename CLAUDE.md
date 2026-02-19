@@ -85,7 +85,7 @@ AVROS/
 | `avros_webui` | ament_python | `webui_node`: phone joystick WebSocket → ActuatorCommand (direct control) |
 | `avros_navigation` | ament_python | `route_planner_node`: GPS → OSMnx route → Nav2 waypoints |
 
-No `avros_sensors` — upstream drivers (velodyne, realsense2_camera, xsens_mti_driver) used directly via official packages.
+No `avros_sensors` — upstream drivers used directly. `realsense-ros` is built from source in the workspace (overrides apt) due to librealsense RSUSB backend requirement. Velodyne and Xsens use official packages.
 
 ---
 
@@ -112,13 +112,18 @@ No `avros_sensors` — upstream drivers (velodyne, realsense2_camera, xsens_mti_
 - **Range filter:** min 1.0m (car body), max 50.0m
 - **Verified working** — data confirmed via tcpdump and topic echo
 
-### Intel RealSense D435i
+### Intel RealSense D455
 
-- **Package:** `ros-humble-realsense2-camera` (apt, or build from source on Jetson with CUDA)
+- **Package:** Built from source — `realsense-ros` 4.56.4 in `~/AVROS/src/realsense-ros/` linked against librealsense 2.57.6 (`~/librealsense`, RSUSB backend)
+- **Firmware:** 5.13.0.50 (downgraded from 5.17.x — firmware 5.16+ causes `bad_optional_access` crash due to HID descriptor incompatibility with RSUSB)
 - **Config:** `avros_bringup/config/realsense.yaml`
 - **Resolution:** 1280x720 @ 30fps (color + depth)
 - **Features:** depth align enabled, pointcloud disabled (Nav2 uses VoxelLayer instead)
-- **Jetson notes:** May need librealsense2 built from source with `-DBUILD_WITH_CUDA=true` and kernel module patching (jetsonhacks)
+- **IMU:** Disabled (`enable_gyro: false`, `enable_accel: false`) — D455 IMU fails with RSUSB backend; Xsens provides IMU
+- **Firmware update:** `rs-fw-update -f ~/D4XX_FW_Image-5.13.0.50.bin`
+- **Key issue:** [librealsense#14169](https://github.com/IntelRealSense/librealsense/issues/14169) — D455 + RSUSB + FW 5.16+ → `bad_optional_access`
+- **Rebuild on Jetson:** `colcon build --symlink-install --packages-select realsense2_camera --cmake-args -Drealsense2_DIR=/usr/local/lib/cmake/realsense2` (ensures linking against local build, not apt v2.56.4)
+- **`control_transfer` warnings:** Expected with RSUSB on JetPack 6 — non-fatal, streaming works normally
 
 ### Xsens MTi-680G (IMU + GNSS)
 
@@ -342,6 +347,8 @@ CycloneDDS with shared memory enabled (`cyclonedds.xml`):
 | Starlette StaticFiles 404 with `--symlink-install` | Add `follow_symlink=True` to `StaticFiles()` |
 | sensors.launch.py xacro YAML parse error (Humble) | Wrap in `ParameterValue(Command([...]), value_type=str)` |
 | Port 8000 held after webui crash/disconnect | `fuser -k 8000/tcp` before relaunch |
+| RealSense D455 `bad_optional_access` crash | Downgrade FW to 5.13.0.50 + use RSUSB backend (librealsense built from source with `-DFORCE_RSUSB_BACKEND=ON`) |
+| realsense-ros 4.57.6 compile error (RS2_STREAM_SAFETY) | Use 4.56.4 — 4.57.x adds D457 safety features not in librealsense 2.57.6 |
 
 ---
 
@@ -350,7 +357,7 @@ CycloneDDS with shared memory enabled (`cyclonedds.xml`):
 - [ ] Measure physical sensor mount positions on vehicle (URDF imu_link, velodyne, camera_link)
 - [ ] Calibrate GNSS lever arm in xsens.yaml (antenna offset from IMU)
 - [ ] Test full sensors.launch.py (all sensors together)
-- [ ] Verify RealSense D435i camera connected and working
+- [ ] Verify RealSense D455 camera connected and working (FW 5.13.0.50)
 - [ ] Verify Xsens MTi-680G on /dev/ttyUSB0
 - [ ] Test localization stack (EKF + navsat)
 - [ ] Test full Nav2 navigation stack

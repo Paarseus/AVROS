@@ -1,8 +1,7 @@
-# Intel RealSense D435i configuration
-# Package: ros-humble-realsense2-camera (apt)
-# On Jetson: build librealsense2 from source with -DBUILD_WITH_CUDA=true
-# then build realsense-ros from source against it
-# Kernel patching: use jetsonhacks/jetson-orin-librealsense prebuilt modules
+# Intel RealSense D455 configuration
+# Built from source: librealsense2 v2.57.6 (RSUSB backend) + realsense-ros 4.56.4
+# Firmware: downgraded to 5.13.0.50 (5.16+ causes bad_optional_access on RSUSB)
+# IMU disabled: D455 HID/IMU fails with RSUSB backend; use Xsens for IMU instead
 
 camera:
   ros__parameters:

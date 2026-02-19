@@ -68,7 +68,7 @@ def generate_launch_description():
             output='screen',
         ),
 
-        # RealSense D435i
+        # RealSense D455 (built from source, RSUSB backend)
         Node(
             package='realsense2_camera',
             executable='realsense2_camera_node',
