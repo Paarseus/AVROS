@@ -14,8 +14,12 @@ Migration of the AV2.1-API autonomous vehicle codebase to ROS2 (Humble). Five cu
 ## Build & Test
 
 ```bash
-# Build all packages (avros_msgs must build first for message generation)
+# Clone source dependencies (one-time setup, requires python3-vcstool)
 cd ~/AVROS
+vcs import src < avros.repos
+# Clones src/realsense-ros/ (4.56.4) and src/xsens_mti/ (ros2 branch, includes xsens_mti_ros2_driver + ntrip)
+
+# Build all packages (avros_msgs must build first for message generation)
 colcon build --symlink-install --packages-select avros_msgs
 colcon build --symlink-install
 
@@ -57,6 +61,7 @@ ros2 topic pub --once /avros/actuator_command avros_msgs/msg/ActuatorCommand \
 ```
 AVROS/
 ├── CLAUDE.md
+├── avros.repos                   # vcstool manifest — source dependencies
 ├── requirements.txt              # pip deps: osmnx, fastapi, uvicorn, websockets
 ├── src/
 │   ├── avros_msgs/               # ament_cmake — ActuatorCommand, ActuatorState, PlanRoute
@@ -85,7 +90,7 @@ AVROS/
 | `avros_webui` | ament_python | `webui_node`: phone joystick WebSocket → ActuatorCommand (direct control) |
 | `avros_navigation` | ament_python | `route_planner_node`: GPS → OSMnx route → Nav2 waypoints |
 
-No `avros_sensors` — upstream drivers used directly. `realsense-ros` 4.56.4 is cloned into `src/realsense-ros/` and built from source (git-ignored, not tracked). `ntrip` is cloned into `src/ntrip/` and built from source (git-ignored, not tracked). Velodyne uses `ros-humble-velodyne` (apt). Xsens uses `xsens_mti_ros2_driver` (build from source).
+No `avros_sensors` — upstream drivers used directly. Source dependencies are managed via `avros.repos` (vcstool manifest) and git-ignored. `vcs import src < avros.repos` clones `realsense-ros` (4.56.4) to `src/realsense-ros/` and the Xsens monorepo to `src/xsens_mti/` (contains both `xsens_mti_ros2_driver` and `ntrip` packages). Velodyne uses `ros-humble-velodyne` (apt).
 
 ---
 
@@ -149,16 +154,8 @@ No `avros_sensors` — upstream drivers used directly. `realsense-ros` 4.56.4 is
 - **Launch:** enabled by default in sensors.launch.py; disable with `enable_ntrip:=false`
 - **Credentials:** edit `ntrip_params.yaml` — set `mountpoint`, `username`, `password` for your NTRIP caster
 - **Default caster:** rtk2go.com:2101 (free, requires mountpoint selection)
-- **Setup:**
-  ```bash
-  cd ~/AVROS/src
-  git clone --branch ros2 https://github.com/xsenssupport/Xsens_MTi_ROS_Driver_and_Ntrip_Client.git /tmp/xsens_ntrip
-  cp -r /tmp/xsens_ntrip/src/ntrip ./ntrip
-  rm -rf /tmp/xsens_ntrip
-  cd ~/AVROS
-  colcon build --symlink-install --packages-select ntrip
-  ```
-- **Not tracked in git** — `src/ntrip/` is in `.gitignore`, built from source like `src/realsense-ros/`
+- **Setup:** Included in `avros.repos` — `vcs import src < avros.repos` clones the full Xsens monorepo to `src/xsens_mti/`, which contains both `xsens_mti_ros2_driver` and `ntrip` packages. Then `colcon build` discovers both automatically.
+- **Not tracked in git** — `src/xsens_mti/` is in `.gitignore`, built from source like `src/realsense-ros/`
 
 ---
 
@@ -454,10 +451,10 @@ After removal, only `/usr/local/` provides librealsense2 headers and libraries.
 ### Step 4: Build realsense-ros 4.56.4 from source
 
 ```bash
-cd ~/AVROS/src
-git clone --branch 4.56.4 https://github.com/IntelRealSense/realsense-ros.git
-
+# Clone via vcstool (preferred) or manually:
 cd ~/AVROS
+vcs import src < avros.repos   # clones realsense-ros 4.56.4 + xsens_mti
+
 colcon build --symlink-install \
   --packages-select realsense2_camera_msgs realsense2_description realsense2_camera \
   --cmake-args -Drealsense2_DIR=/usr/local/lib/cmake/realsense2
@@ -505,5 +502,5 @@ ros2 launch realsense2_camera rs_launch.py \
 - [ ] Test full Nav2 navigation stack
 - [ ] Commit SSL cert paths for Jetson (currently only set locally)
 - [ ] Configure NTRIP credentials in ntrip_params.yaml (mountpoint, username, password)
-- [ ] Clone and build ntrip package on Jetson (`src/ntrip/` — see NTRIP Client section)
+- [ ] Run `vcs import src < avros.repos` on Jetson to standardize source deps (replaces old `src/xsens_ros_mti_driver/` with `src/xsens_mti/`)
 - [ ] Verify RTK FIXED/FLOAT status with NTRIP corrections enabled

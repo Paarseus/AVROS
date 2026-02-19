@@ -6,4 +6,4 @@ __pycache__/
 *.egg-info/
 .colcon/
 src/realsense-ros/
-src/ntrip/
+src/xsens_mti/

@@ -1,0 +1,9 @@
+repositories:
+  realsense-ros:
+    type: git
+    url: https://github.com/IntelRealSense/realsense-ros.git
+    version: 4.56.4
+  xsens_mti:
+    type: git
+    url: https://github.com/xsenssupport/Xsens_MTi_ROS_Driver_and_Ntrip_Client.git
+    version: ros2
