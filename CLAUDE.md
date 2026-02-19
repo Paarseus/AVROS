@@ -85,7 +85,7 @@ AVROS/
 | `avros_webui` | ament_python | `webui_node`: phone joystick WebSocket → ActuatorCommand (direct control) |
 | `avros_navigation` | ament_python | `route_planner_node`: GPS → OSMnx route → Nav2 waypoints |
 
-No `avros_sensors` — upstream drivers used directly. `realsense-ros` is built from source in the workspace (overrides apt) due to librealsense RSUSB backend requirement. Velodyne and Xsens use official packages.
+No `avros_sensors` — upstream drivers used directly. `realsense-ros` 4.56.4 is cloned into `src/realsense-ros/` and built from source (git-ignored, not tracked). Velodyne uses `ros-humble-velodyne` (apt). Xsens uses `xsens_ros_mti_driver` (build from source).
 
 ---
 
@@ -114,16 +114,16 @@ No `avros_sensors` — upstream drivers used directly. `realsense-ros` is built 
 
 ### Intel RealSense D455
 
-- **Package:** Built from source — `realsense-ros` 4.56.4 in `~/AVROS/src/realsense-ros/` linked against librealsense 2.57.6 (`~/librealsense`, RSUSB backend)
-- **Firmware:** 5.13.0.50 (downgraded from 5.17.x — firmware 5.16+ causes `bad_optional_access` crash due to HID descriptor incompatibility with RSUSB)
+- **Package:** Built from source — `realsense-ros` 4.56.4 in `~/AVROS/src/realsense-ros/` + librealsense 2.57.6 at `/usr/local/` (built from `~/librealsense` with RSUSB backend)
+- **Firmware:** 5.13.0.50 (downgraded from 5.17.0.9)
+- **Serial:** 215122251311
+- **USB:** 3.2
 - **Config:** `avros_bringup/config/realsense.yaml`
 - **Resolution:** 1280x720 @ 30fps (color + depth)
 - **Features:** depth align enabled, pointcloud disabled (Nav2 uses VoxelLayer instead)
-- **IMU:** Disabled (`enable_gyro: false`, `enable_accel: false`) — D455 IMU fails with RSUSB backend; Xsens provides IMU
-- **Firmware update:** `rs-fw-update -f ~/D4XX_FW_Image-5.13.0.50.bin`
-- **Key issue:** [librealsense#14169](https://github.com/IntelRealSense/librealsense/issues/14169) — D455 + RSUSB + FW 5.16+ → `bad_optional_access`
-- **Rebuild on Jetson:** `colcon build --symlink-install --packages-select realsense2_camera --cmake-args -Drealsense2_DIR=/usr/local/lib/cmake/realsense2` (ensures linking against local build, not apt v2.56.4)
-- **`control_transfer` warnings:** Expected with RSUSB on JetPack 6 — non-fatal, streaming works normally
+- **IMU:** Disabled (`enable_gyro: false`, `enable_accel: false`) — D455 HID/IMU fails with RSUSB backend on JetPack 6; Xsens provides IMU instead
+- **Verified working** — color ~15-19 Hz, depth streaming, rqt_image_view confirmed
+- **Visualization:** `~/Desktop/visualize_camera.sh` on Jetson (launches camera + rqt_image_view)
 
 ### Xsens MTi-680G (IMU + GNSS)
 
@@ -347,8 +347,111 @@ CycloneDDS with shared memory enabled (`cyclonedds.xml`):
 | Starlette StaticFiles 404 with `--symlink-install` | Add `follow_symlink=True` to `StaticFiles()` |
 | sensors.launch.py xacro YAML parse error (Humble) | Wrap in `ParameterValue(Command([...]), value_type=str)` |
 | Port 8000 held after webui crash/disconnect | `fuser -k 8000/tcp` before relaunch |
-| RealSense D455 `bad_optional_access` crash | Downgrade FW to 5.13.0.50 + use RSUSB backend (librealsense built from source with `-DFORCE_RSUSB_BACKEND=ON`) |
-| realsense-ros 4.57.6 compile error (RS2_STREAM_SAFETY) | Use 4.56.4 — 4.57.x adds D457 safety features not in librealsense 2.57.6 |
+| RealSense D455 `bad_optional_access` crash | Downgrade FW to 5.13.0.50 + use RSUSB backend (see RealSense Setup Guide below) |
+| realsense-ros 4.57.6 compile error (`RS2_STREAM_SAFETY`) | Use 4.56.4 — 4.57.x adds D457 safety features not in librealsense 2.57.6 |
+| realsense-ros compiled version mismatch warning | Apt `ros-humble-librealsense2` headers shadow `/usr/local/include/` headers — remove apt package (see below) |
+| RealSense USB interface busy on relaunch | `pkill -f realsense2_camera_node` + wait 2s before relaunching |
+| `control_transfer returned error` warnings | Normal with RSUSB backend on JetPack 6 — non-fatal, does not affect streaming |
+| `No HID info provided, IMU is disabled` | Expected — D455 HID/IMU not available with RSUSB backend; use Xsens for IMU |
+| `rgb_camera.power_line_frequency` range error | D455 FW 5.13.0.50 supports range [0,2] but driver sends 3 — cosmetic, no effect |
+
+---
+
+## RealSense D455 Setup Guide (Jetson Orin, JetPack 6)
+
+This documents the full procedure to get the RealSense D455 working on the Jetson Orin running JetPack 6 (R36.x, kernel 5.15-tegra). The standard apt packages do not work due to HID/V4L2 incompatibilities.
+
+### Problem
+
+The D455 crashes with `std::bad_optional_access` when launched via the ROS2 node. Root cause: firmware 5.16+ presents HID descriptors that the RSUSB userspace backend cannot handle on JetPack 6. The `ds-motion-common.cpp` code logs "No HID info provided, IMU is disabled" then a `std::optional::value()` call on an empty optional throws, crashing the entire device initialization.
+
+References:
+- [librealsense #14169](https://github.com/IntelRealSense/librealsense/issues/14169) — D455 + RSUSB + FW 5.16+
+- [librealsense #13341](https://github.com/IntelRealSense/librealsense/issues/13341) — JetPack 6 removed HID/hidraw
+- [realsense-ros #3416](https://github.com/realsenseai/realsense-ros/issues/3416) — exact crash report
+
+### Step 1: Build librealsense 2.57.6 from source with RSUSB
+
+```bash
+cd ~/librealsense
+mkdir -p build && cd build
+cmake .. \
+  -DFORCE_RSUSB_BACKEND=ON \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DBUILD_EXAMPLES=true \
+  -DBUILD_WITH_CUDA=true
+make -j6    # -j6 not -j8 to avoid OOM on Orin
+sudo make install
+sudo ldconfig
+```
+
+Installs to `/usr/local/lib/` and `/usr/local/include/`.
+
+### Step 2: Downgrade D455 firmware to 5.13.0.50
+
+```bash
+# Download firmware
+wget https://librealsense.intel.com/Releases/RS4xx/FW/D4XX_FW_Image-5.13.0.50.bin -O ~/D4XX_FW_Image-5.13.0.50.bin
+
+# Flash (camera must be connected via USB)
+rs-fw-update -f ~/D4XX_FW_Image-5.13.0.50.bin
+
+# Verify
+rs-enumerate-devices --compact
+# Should show: Intel RealSense D455  5.13.0.50  USB 3.2
+```
+
+### Step 3: Remove apt librealsense (prevents header/library conflicts)
+
+The apt package `ros-humble-librealsense2` installs v2.56.4 headers at `/opt/ros/humble/include/librealsense2/` which shadow the correct v2.57.6 headers at `/usr/local/include/librealsense2/`. CMake's ament include path ordering puts apt headers first, causing realsense-ros to compile with stale version strings even when `-Drealsense2_DIR` points to the local build.
+
+```bash
+sudo apt remove ros-humble-librealsense2 ros-humble-librealsense2-dbgsym
+# This also removes ros-humble-realsense2-camera (apt version) — we use source build anyway
+```
+
+After removal, only `/usr/local/` provides librealsense2 headers and libraries.
+
+### Step 4: Build realsense-ros 4.56.4 from source
+
+```bash
+cd ~/AVROS/src
+git clone --branch 4.56.4 https://github.com/IntelRealSense/realsense-ros.git
+
+cd ~/AVROS
+colcon build --symlink-install \
+  --packages-select realsense2_camera_msgs realsense2_description realsense2_camera \
+  --cmake-args -Drealsense2_DIR=/usr/local/lib/cmake/realsense2
+source install/setup.bash
+```
+
+**Why 4.56.4 and not 4.57.6?** Tag 4.57.6 adds D457 safety camera features (`RS2_STREAM_SAFETY`, `RS2_STREAM_LABELED_POINT_CLOUD`, `RS2_STREAM_OCCUPANCY`) that don't exist in librealsense 2.57.6 — the build fails with undeclared identifier errors. Tag 4.56.4 requires `find_package(realsense2 2.56)` which is satisfied by 2.57.6.
+
+### Step 5: Verify
+
+```bash
+source /opt/ros/humble/setup.bash
+source ~/AVROS/install/setup.bash
+
+ros2 launch realsense2_camera rs_launch.py \
+  camera_name:=camera enable_color:=true enable_depth:=true \
+  enable_gyro:=false enable_accel:=false
+
+# Expected output:
+#   Built with LibRealSense v2.57.6
+#   Running with LibRealSense v2.57.6
+#   Device Name: Intel RealSense D455
+#   Device FW version: 5.13.0.50
+#   RealSense Node Is Up!
+```
+
+### Pitfalls encountered
+
+1. **Stale build artifacts** — After checking out a new librealsense version, `make` can use old `.o` files. Always `rm -rf build/` or `make clean` before rebuilding.
+2. **CMake finding apt before local** — Even with `-Drealsense2_DIR=/usr/local/lib/cmake/realsense2`, the ament build system adds `-isystem /opt/ros/humble/include` before the local include path. The compiler finds apt headers first. Removing the apt package is the only reliable fix.
+3. **`--allow-overriding` flag** — Colcon on Humble doesn't support this flag. Not needed if the apt realsense2_camera package is removed.
+4. **Symlink conflicts in install/** — If rebuilding after a failed build, stale symlinks can cause "File exists" errors. Fix: `rm -rf build/<pkg> install/<pkg>` before rebuilding.
+5. **USB interface busy** — A previous camera node holds the USB interface. Always `pkill -f realsense2_camera_node && sleep 2` before relaunching.
 
 ---
 
@@ -357,7 +460,7 @@ CycloneDDS with shared memory enabled (`cyclonedds.xml`):
 - [ ] Measure physical sensor mount positions on vehicle (URDF imu_link, velodyne, camera_link)
 - [ ] Calibrate GNSS lever arm in xsens.yaml (antenna offset from IMU)
 - [ ] Test full sensors.launch.py (all sensors together)
-- [ ] Verify RealSense D455 camera connected and working (FW 5.13.0.50)
+- [x] Verify RealSense D455 camera working (FW 5.13.0.50, librealsense 2.57.6, realsense-ros 4.56.4)
 - [ ] Verify Xsens MTi-680G on /dev/ttyUSB0
 - [ ] Test localization stack (EKF + navsat)
 - [ ] Test full Nav2 navigation stack
