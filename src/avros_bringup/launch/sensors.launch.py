@@ -12,6 +12,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable
+from launch.conditions import IfCondition
 from launch.substitutions import Command, LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
@@ -24,6 +25,7 @@ def generate_launch_description():
     velodyne_config = os.path.join(pkg_dir, 'config', 'velodyne.yaml')
     realsense_config = os.path.join(pkg_dir, 'config', 'realsense.yaml')
     xsens_config = os.path.join(pkg_dir, 'config', 'xsens.yaml')
+    ntrip_config = os.path.join(pkg_dir, 'config', 'ntrip_params.yaml')
 
     return LaunchDescription([
         # CycloneDDS shared memory
@@ -39,6 +41,11 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'use_sim_time', default_value='false',
             description='Use simulation clock'
+        ),
+
+        DeclareLaunchArgument(
+            'enable_ntrip', default_value='true',
+            description='Enable NTRIP client for RTK corrections'
         ),
 
         # robot_state_publisher: URDF -> static TF
@@ -91,5 +98,20 @@ def generate_launch_description():
             name='xsens_mti_node',
             parameters=[xsens_config],
             output='screen',
+        ),
+
+        # NTRIP client for RTK corrections (GPGGA -> caster -> RTCM3)
+        # Package: ntrip (from Xsens_MTi_ROS_Driver_and_Ntrip_Client repo)
+        Node(
+            package='ntrip',
+            executable='ntrip',
+            name='ntrip_client',
+            parameters=[ntrip_config],
+            remappings=[
+                ('nmea', '/nmea'),
+                ('rtcm', '/rtcm'),
+            ],
+            output='screen',
+            condition=IfCondition(LaunchConfiguration('enable_ntrip')),
         ),
     ])

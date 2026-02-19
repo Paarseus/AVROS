@@ -27,6 +27,11 @@ def generate_launch_description():
             description='Use simulation clock'
         ),
 
+        DeclareLaunchArgument(
+            'enable_ntrip', default_value='true',
+            description='Enable NTRIP client for RTK corrections'
+        ),
+
         # Include sensors launch
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -34,6 +39,7 @@ def generate_launch_description():
             ),
             launch_arguments={
                 'use_sim_time': LaunchConfiguration('use_sim_time'),
+                'enable_ntrip': LaunchConfiguration('enable_ntrip'),
             }.items(),
         ),
 

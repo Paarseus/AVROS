@@ -1,0 +1,16 @@
+# NTRIP client configuration for RTK corrections
+# The ntrip node bridges GPGGA from /nmea to an NTRIP caster
+# and publishes RTCM3 corrections on /rtcm for the Xsens MTi-680G.
+#
+# Fill in your NTRIP caster credentials below.
+# Free casters: RTK2go (rtk2go.com:2101), UNAVCO, state DOT networks
+# Example mountpoint for Southern California: PPBF_RTCM3 (rtk2go.com)
+
+ntrip_client:
+  ros__parameters:
+    host: "rtk2go.com"
+    port: 2101
+    mountpoint: "CHANGE_ME"
+    username: ""
+    password: ""
+    update_rate: 1.0

@@ -85,7 +85,7 @@ AVROS/
 | `avros_webui` | ament_python | `webui_node`: phone joystick WebSocket → ActuatorCommand (direct control) |
 | `avros_navigation` | ament_python | `route_planner_node`: GPS → OSMnx route → Nav2 waypoints |
 
-No `avros_sensors` — upstream drivers used directly. `realsense-ros` 4.56.4 is cloned into `src/realsense-ros/` and built from source (git-ignored, not tracked). Velodyne uses `ros-humble-velodyne` (apt). Xsens uses `xsens_mti_ros2_driver` (build from source).
+No `avros_sensors` — upstream drivers used directly. `realsense-ros` 4.56.4 is cloned into `src/realsense-ros/` and built from source (git-ignored, not tracked). `ntrip` is cloned into `src/ntrip/` and built from source (git-ignored, not tracked). Velodyne uses `ros-humble-velodyne` (apt). Xsens uses `xsens_mti_ros2_driver` (build from source).
 
 ---
 
@@ -140,6 +140,26 @@ No `avros_sensors` — upstream drivers used directly. `realsense-ros` 4.56.4 is
 - **Required deps:** `ros-humble-mavros-msgs`, `ros-humble-nmea-msgs` (apt)
 - **Verified working** — 100Hz IMU data confirmed on /dev/ttyUSB0
 
+### NTRIP Client (RTK Corrections)
+
+- **Package:** `ntrip` (C++, ament_cmake — from `Xsens_MTi_ROS_Driver_and_Ntrip_Client` repo, ros2 branch)
+- **Config:** `avros_bringup/config/ntrip_params.yaml`
+- **Data flow:** xsens `/nmea` (GPGGA) → ntrip_client → NTRIP caster → RTCM3 → `/rtcm` → xsens MTi-680G → RTK FIXED/FLOAT
+- **Topics:** subscribes `/nmea`, publishes `/rtcm`
+- **Launch:** enabled by default in sensors.launch.py; disable with `enable_ntrip:=false`
+- **Credentials:** edit `ntrip_params.yaml` — set `mountpoint`, `username`, `password` for your NTRIP caster
+- **Default caster:** rtk2go.com:2101 (free, requires mountpoint selection)
+- **Setup:**
+  ```bash
+  cd ~/AVROS/src
+  git clone --branch ros2 https://github.com/xsenssupport/Xsens_MTi_ROS_Driver_and_Ntrip_Client.git /tmp/xsens_ntrip
+  cp -r /tmp/xsens_ntrip/src/ntrip ./ntrip
+  rm -rf /tmp/xsens_ntrip
+  cd ~/AVROS
+  colcon build --symlink-install --packages-select ntrip
+  ```
+- **Not tracked in git** — `src/ntrip/` is in `.gitignore`, built from source like `src/realsense-ros/`
+
 ---
 
 ## TF Tree
@@ -175,6 +195,8 @@ Sensor mount positions in URDF (`avros.urdf.xacro`) are approximate — measure 
 | `/odometry/filtered` | `nav_msgs/Odometry` | EKF (robot_localization) |
 | `/camera/camera/color/image_raw` | `sensor_msgs/Image` | realsense2_camera_node |
 | `/camera/camera/aligned_depth_to_color/image_raw` | `sensor_msgs/Image` | realsense2_camera_node |
+| `/nmea` | `nmea_msgs/Sentence` | xsens_mti_node (GPGGA ~4 Hz) |
+| `/rtcm` | `mavros_msgs/RTCM` | ntrip_client (RTCM3 corrections) |
 
 ---
 
@@ -282,7 +304,7 @@ Phone-based joystick controller for bench testing. FastAPI + WebSocket + nipplej
 
 | Launch File | What it starts |
 |-------------|---------------|
-| `sensors.launch.py` | robot_state_publisher + velodyne driver/convert + realsense + xsens |
+| `sensors.launch.py` | robot_state_publisher + velodyne driver/convert + realsense + xsens + ntrip (conditional) |
 | `actuator.launch.py` | actuator_node only |
 | `teleop.launch.py` | actuator_node + teleop_twist_keyboard |
 | `webui.launch.py` | actuator_node + webui_node |
@@ -304,6 +326,7 @@ Phone-based joystick controller for bench testing. FastAPI + WebSocket + nipplej
 | `navsat.yaml` | navsat_transform_node |
 | `nav2_params.yaml` | Nav2 (planner, controller, costmaps, BT) |
 | `cyclonedds.xml` | CycloneDDS config — shared memory disabled, socket buffer 10MB |
+| `ntrip_params.yaml` | ntrip_client — NTRIP caster host, port, mountpoint, credentials |
 
 ---
 
@@ -368,6 +391,8 @@ CycloneDDS (`cyclonedds.xml`):
 | numpy binary incompatibility on Jetson | Pin `numpy<2` — numpy 2.x breaks system matplotlib/scipy on JetPack 6 |
 | Camera topics have double prefix | Topics are at `/camera/camera/...` (e.g. `/camera/camera/color/image_raw`) due to `camera_name:=camera` config — both namespace and node name are "camera" |
 | RMW_IMPLEMENTATION not set | Must export `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp` in addition to `CYCLONEDDS_URI` — defaults to FastDDS otherwise |
+| NTRIP client no data | Verify credentials and mountpoint in `ntrip_params.yaml`; check internet access from Jetson; try `enable_ntrip:=false` to isolate |
+| NTRIP `mountpoint` still `CHANGE_ME` | Edit `ntrip_params.yaml` — pick a nearby mountpoint from your caster (e.g. rtk2go.com mount list) |
 
 ---
 
@@ -479,3 +504,6 @@ ros2 launch realsense2_camera rs_launch.py \
 - [ ] Test localization stack (EKF + navsat)
 - [ ] Test full Nav2 navigation stack
 - [ ] Commit SSL cert paths for Jetson (currently only set locally)
+- [ ] Configure NTRIP credentials in ntrip_params.yaml (mountpoint, username, password)
+- [ ] Clone and build ntrip package on Jetson (`src/ntrip/` — see NTRIP Client section)
+- [ ] Verify RTK FIXED/FLOAT status with NTRIP corrections enabled

@@ -20,6 +20,7 @@
   <exec_depend>velodyne_driver</exec_depend>
   <exec_depend>velodyne_pointcloud</exec_depend>
   <exec_depend>realsense2_camera</exec_depend>
+  <exec_depend>ntrip</exec_depend>
   <exec_depend>teleop_twist_keyboard</exec_depend>
   <exec_depend>avros_webui</exec_depend>
 
