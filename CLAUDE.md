@@ -85,7 +85,7 @@ AVROS/
 | `avros_webui` | ament_python | `webui_node`: phone joystick WebSocket → ActuatorCommand (direct control) |
 | `avros_navigation` | ament_python | `route_planner_node`: GPS → OSMnx route → Nav2 waypoints |
 
-No `avros_sensors` — upstream drivers used directly. `realsense-ros` 4.56.4 is cloned into `src/realsense-ros/` and built from source (git-ignored, not tracked). Velodyne uses `ros-humble-velodyne` (apt). Xsens uses `xsens_ros_mti_driver` (build from source).
+No `avros_sensors` — upstream drivers used directly. `realsense-ros` 4.56.4 is cloned into `src/realsense-ros/` and built from source (git-ignored, not tracked). Velodyne uses `ros-humble-velodyne` (apt). Xsens uses `xsens_mti_ros2_driver` (build from source).
 
 ---
 
@@ -122,18 +122,23 @@ No `avros_sensors` — upstream drivers used directly. `realsense-ros` 4.56.4 is
 - **Resolution:** 1280x720 @ 30fps (color + depth)
 - **Features:** depth align enabled, pointcloud disabled (Nav2 uses VoxelLayer instead)
 - **IMU:** Disabled (`enable_gyro: false`, `enable_accel: false`) — D455 HID/IMU fails with RSUSB backend on JetPack 6; Xsens provides IMU instead
-- **Verified working** — color ~15-19 Hz, depth streaming, rqt_image_view confirmed
+- **Verified working** — color 30fps, depth streaming, rqt_image_view confirmed
 - **Visualization:** `~/Desktop/visualize_camera.sh` on Jetson (launches camera + rqt_image_view)
 
 ### Xsens MTi-680G (IMU + GNSS)
 
-- **Package:** `xsens_ros_mti_driver` (build from source, ros2 branch)
+- **Package:** `xsens_mti_ros2_driver` (build from source, ros2 branch)
+- **Device ID:** 0080005BF5
+- **Firmware:** 1.12.0, build 42
+- **Filter:** General_RTK
 - **Config:** `avros_bringup/config/xsens.yaml`
 - **Port:** `/dev/ttyUSB0` at 115200 baud
 - **Output rate:** 100 Hz
 - **Topics:** `/imu/data`, `/gnss` (NavSatFix), plus quaternion, euler, acceleration, mag, twist, NMEA
 - **GNSS lever arm:** `[0.0, 0.0, 0.0]` — TODO: measure antenna offset on vehicle
 - **u-Blox platform:** Automotive (type 4)
+- **Required deps:** `ros-humble-mavros-msgs`, `ros-humble-nmea-msgs` (apt)
+- **Verified working** — 100Hz IMU data confirmed on /dev/ttyUSB0
 
 ---
 
@@ -168,8 +173,8 @@ Sensor mount positions in URDF (`avros.urdf.xacro`) are approximate — measure 
 | `/imu/data` | `sensor_msgs/Imu` | xsens_mti_node (100 Hz) |
 | `/gnss` | `sensor_msgs/NavSatFix` | xsens_mti_node |
 | `/odometry/filtered` | `nav_msgs/Odometry` | EKF (robot_localization) |
-| `/camera/color/image_raw` | `sensor_msgs/Image` | realsense2_camera_node |
-| `/camera/aligned_depth_to_color/image_raw` | `sensor_msgs/Image` | realsense2_camera_node |
+| `/camera/camera/color/image_raw` | `sensor_msgs/Image` | realsense2_camera_node |
+| `/camera/camera/aligned_depth_to_color/image_raw` | `sensor_msgs/Image` | realsense2_camera_node |
 
 ---
 
@@ -219,6 +224,8 @@ Teensy at `192.168.13.177:5005`. Watchdog: 500 ms. Keepalive at 200 ms.
 A E=0 T=0.500 M=D B=0.000 S=0.100    # all-in-one command
 → {"e":0,"t":0.500,"m":"D","b":0.000,"s":0.100,"w":1}
 ```
+
+**Verified working** — Teensy UDP communication confirmed. Mode switching (N to D) works, e-stop works, watchdog active.
 
 ### Control Priority (actuator_node)
 
@@ -296,17 +303,18 @@ Phone-based joystick controller for bench testing. FastAPI + WebSocket + nipplej
 | `ekf.yaml` | robot_localization EKF |
 | `navsat.yaml` | navsat_transform_node |
 | `nav2_params.yaml` | Nav2 (planner, controller, costmaps, BT) |
-| `cyclonedds.xml` | CycloneDDS shared memory + socket buffer config |
+| `cyclonedds.xml` | CycloneDDS config — shared memory disabled, socket buffer 10MB |
 
 ---
 
 ## DDS Config
 
-CycloneDDS with shared memory enabled (`cyclonedds.xml`):
+CycloneDDS (`cyclonedds.xml`):
 - Socket receive buffer: 10 MB minimum
-- Shared memory: enabled
+- Shared memory: **disabled** (iceoryx RouDi daemon not running; `<SharedMemory><Enable>false</Enable></SharedMemory>`)
 - Network: auto-detect interface
 - Set via: `CYCLONEDDS_URI=file://<path>` in sensors.launch.py
+- **Must also set** `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp` (defaults to FastDDS otherwise)
 
 ---
 
@@ -328,7 +336,7 @@ CycloneDDS with shared memory enabled (`cyclonedds.xml`):
 
 | AV2.1-API | Upstream Package |
 |-----------|-----------------|
-| `sensors/xsens_receiver.py` | `xsens_mti_driver` |
+| `sensors/xsens_receiver.py` | `xsens_mti_ros2_driver` |
 | `sensors/lidar_interface.py` | `velodyne` |
 | `sensors/camera_interface.py` | `realsense2_camera` |
 | `perception/occupancy_grid.py` | `nav2_costmap_2d` VoxelLayer |
@@ -354,6 +362,12 @@ CycloneDDS with shared memory enabled (`cyclonedds.xml`):
 | `control_transfer returned error` warnings | Normal with RSUSB backend on JetPack 6 — non-fatal, does not affect streaming |
 | `No HID info provided, IMU is disabled` | Expected — D455 HID/IMU not available with RSUSB backend; use Xsens for IMU |
 | `rgb_camera.power_line_frequency` range error | D455 FW 5.13.0.50 supports range [0,2] but driver sends 3 — cosmetic, no effect |
+| Xsens driver package name | Correct name is `xsens_mti_ros2_driver` (not `xsens_ros_mti_driver`) |
+| Xsens driver missing deps | `ros-humble-mavros-msgs` and `ros-humble-nmea-msgs` must be installed via apt |
+| CycloneDDS iceoryx/RouDi errors on launch | SharedMemory must be disabled in `cyclonedds.xml` unless RouDi daemon is running — set `<SharedMemory><Enable>false</Enable></SharedMemory>` |
+| numpy binary incompatibility on Jetson | Pin `numpy<2` — numpy 2.x breaks system matplotlib/scipy on JetPack 6 |
+| Camera topics have double prefix | Topics are at `/camera/camera/...` (e.g. `/camera/camera/color/image_raw`) due to `camera_name:=camera` config — both namespace and node name are "camera" |
+| RMW_IMPLEMENTATION not set | Must export `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp` in addition to `CYCLONEDDS_URI` — defaults to FastDDS otherwise |
 
 ---
 
@@ -459,9 +473,9 @@ ros2 launch realsense2_camera rs_launch.py \
 
 - [ ] Measure physical sensor mount positions on vehicle (URDF imu_link, velodyne, camera_link)
 - [ ] Calibrate GNSS lever arm in xsens.yaml (antenna offset from IMU)
-- [ ] Test full sensors.launch.py (all sensors together)
+- [x] Test full sensors.launch.py (all sensors together) — DONE, all 3 sensors working: camera 30fps, velodyne ~20Hz, IMU 100Hz
 - [x] Verify RealSense D455 camera working (FW 5.13.0.50, librealsense 2.57.6, realsense-ros 4.56.4)
-- [ ] Verify Xsens MTi-680G on /dev/ttyUSB0
+- [x] Verify Xsens MTi-680G on /dev/ttyUSB0 — DONE, device ID 0080005BF5, FW 1.12.0, 100Hz IMU
 - [ ] Test localization stack (EKF + navsat)
 - [ ] Test full Nav2 navigation stack
 - [ ] Commit SSL cert paths for Jetson (currently only set locally)

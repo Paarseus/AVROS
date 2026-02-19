@@ -1,5 +1,5 @@
 # Xsens MTi-680G configuration
-# Package: xsens_ros_mti_driver (build from source)
+# Package: xsens_mti_ros2_driver (build from source)
 # https://github.com/xsenssupport/Xsens_MTi_ROS_Driver_and_Ntrip_Client
 
 xsens_mti_node:
@@ -28,7 +28,7 @@ xsens_mti_node:
     pub_dv: false
     pub_pressure: false
     pub_temperature: false
-    pub_transform: true
+    pub_transform: false          # URDF provides base_link -> imu_link
     pub_status: true
     pub_utctime: true
     pub_sampletime: true

@@ -13,7 +13,7 @@
       <SocketReceiveBufferSize min="10MB"/>
     </Internal>
     <SharedMemory>
-      <Enable>true</Enable>
+      <Enable>false</Enable>
       <LogLevel>info</LogLevel>
     </SharedMemory>
   </Domain>

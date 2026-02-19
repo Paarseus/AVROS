@@ -12,9 +12,10 @@ velodyne_driver_node:
     gps_time: false
     time_offset: 0.0
 
-velodyne_convert_node:
+velodyne_transform_node:
   ros__parameters:
     model: "VLP16"
     min_range: 1.0                 # Ignore points closer (car body)
     max_range: 50.0
-    calibration: ""                # Use default calibration
+    calibration: "/opt/ros/humble/share/velodyne_pointcloud/params/VLP16db.yaml"
+    organize_cloud: true

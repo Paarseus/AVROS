@@ -28,6 +28,10 @@ def generate_launch_description():
     return LaunchDescription([
         # CycloneDDS shared memory
         SetEnvironmentVariable(
+            name='RMW_IMPLEMENTATION',
+            value='rmw_cyclonedds_cpp'
+        ),
+        SetEnvironmentVariable(
             name='CYCLONEDDS_URI',
             value='file://' + cyclonedds_file
         ),
@@ -62,8 +66,8 @@ def generate_launch_description():
         # Velodyne raw packets -> PointCloud2
         Node(
             package='velodyne_pointcloud',
-            executable='velodyne_convert_node',
-            name='velodyne_convert_node',
+            executable='velodyne_transform_node',
+            name='velodyne_transform_node',
             parameters=[velodyne_config],
             output='screen',
         ),
@@ -78,11 +82,11 @@ def generate_launch_description():
         ),
 
         # Xsens MTi-680G IMU/GNSS
-        # Package: xsens_ros_mti_driver (build from source)
+        # Package: xsens_mti_ros2_driver (build from source)
         # git clone --recursive --branch ros2 \
         #   https://github.com/xsenssupport/Xsens_MTi_ROS_Driver_and_Ntrip_Client.git
         Node(
-            package='xsens_ros_mti_driver',
+            package='xsens_mti_ros2_driver',
             executable='xsens_mti_node',
             name='xsens_mti_node',
             parameters=[xsens_config],
