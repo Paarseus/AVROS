@@ -1,0 +1,218 @@
+#VRML_SIM R2023b utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/floors/protos/UnevenTerrain.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/road/protos/StraightRoadSegment.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/road/protos/RoadIntersection.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/buildings/protos/SimpleBuilding.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/trees/protos/Tree.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/vehicles/protos/abstract/AckermannVehicle.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/vehicles/protos/abstract/Car.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/devices/velodyne/protos/VelodynePuck.proto"
+
+WorldInfo {
+  info [
+    "Cal Poly Pomona campus — placeholder world for AVROS simulation."
+    "Replace with OSM-imported world via: python3 $WEBOTS_HOME/resources/osm_importer/importer.py --input=cpp_campus.osm --output=cpp_campus.wbt"
+  ]
+  title "AVROS - Cal Poly Pomona Campus"
+  gpsCoordinateSystem "WGS84"
+  gpsReference 34.059 -117.821 340.0
+  basicTimeStep 10
+  lineScale 1
+}
+
+Viewpoint {
+  orientation -0.3 0.0 0.95 0.5
+  position -30 -60 40
+  follow "avros"
+}
+
+TexturedBackground {
+}
+
+TexturedBackgroundLight {
+}
+
+UnevenTerrain {
+  size 500 500 0
+}
+
+# ── Main east-west road (W University Dr approximation) ──────────────
+StraightRoadSegment {
+  translation -200 0 0.01
+  name "university_dr_west"
+  width 8
+  length 200
+  roadBorderHeight 0.1
+}
+
+StraightRoadSegment {
+  translation 0 0 0.01
+  name "university_dr_east"
+  width 8
+  length 200
+  roadBorderHeight 0.1
+}
+
+# ── North-south road (S Kellogg Dr approximation) ───────────────────
+StraightRoadSegment {
+  translation 0 -150 0.01
+  rotation 0 0 1 1.5708
+  name "kellogg_dr_south"
+  width 8
+  length 150
+  roadBorderHeight 0.1
+}
+
+StraightRoadSegment {
+  translation 0 0 0.01
+  rotation 0 0 1 1.5708
+  name "kellogg_dr_north"
+  width 8
+  length 150
+  roadBorderHeight 0.1
+}
+
+# ── Intersection ─────────────────────────────────────────────────────
+RoadIntersection {
+  translation 0 0 0.01
+  name "main_intersection"
+  roadsWidth 8
+  startRoadsLength 5
+}
+
+# ── Buildings ────────────────────────────────────────────────────────
+SimpleBuilding {
+  translation 30 40 0
+  name "building_A"
+  floorHeight 4
+  floorNumber 3
+  corners [
+    0 0
+    20 0
+    20 15
+    0 15
+  ]
+}
+
+SimpleBuilding {
+  translation -50 30 0
+  name "building_B"
+  floorHeight 4
+  floorNumber 2
+  corners [
+    0 0
+    30 0
+    30 20
+    0 20
+  ]
+}
+
+SimpleBuilding {
+  translation 50 -40 0
+  name "building_C"
+  floorHeight 3.5
+  floorNumber 4
+  corners [
+    0 0
+    25 0
+    25 25
+    0 25
+  ]
+}
+
+SimpleBuilding {
+  translation -40 -50 0
+  name "building_D"
+  floorHeight 4
+  floorNumber 2
+  corners [
+    0 0
+    15 0
+    15 30
+    0 30
+  ]
+}
+
+# ── Trees ────────────────────────────────────────────────────────────
+Tree {
+  translation 15 15 0
+  name "tree_1"
+}
+
+Tree {
+  translation -20 25 0
+  name "tree_2"
+}
+
+Tree {
+  translation 35 -15 0
+  name "tree_3"
+}
+
+Tree {
+  translation -30 -20 0
+  name "tree_4"
+}
+
+Tree {
+  translation 60 10 0
+  name "tree_5"
+}
+
+Tree {
+  translation -60 -10 0
+  name "tree_6"
+}
+
+# ── AVROS Vehicle ────────────────────────────────────────────────────
+# Car PROTO: controller "<extern>" enables webots_ros2_driver connection.
+# Sensor positions approximate the URDF mount points (imu 0.6,0,0.8;
+# velodyne 0.6,0,1.0; camera 1.0,0,0.8 relative to base_link/rear axle).
+# In the Car PROTO, sensorsSlotCenter is at the vehicle center and
+# sensorsSlotTop is above the roof — offsets are relative to those slots.
+Car {
+  name "avros"
+  translation 5 -2 0.4
+  controller "<extern>"
+  wheelbase 1.23
+  trackFront 0.9
+  trackRear 0.9
+  maxSteeringAngle 0.489
+  sensorsSlotTop [
+    VelodynePuck {
+      name "velodyne"
+      translation 0 0 0.2
+    }
+  ]
+  sensorsSlotCenter [
+    Camera {
+      name "camera_color"
+      translation 0.4 0 0.0
+      width 640
+      height 480
+    }
+    RangeFinder {
+      name "camera_depth"
+      translation 0.4 0 0.0
+      width 640
+      height 480
+      maxRange 10.0
+    }
+    InertialUnit {
+      name "imu_inertial"
+    }
+    Gyro {
+      name "imu_gyro"
+    }
+    Accelerometer {
+      name "imu_accel"
+    }
+    GPS {
+      name "gps"
+      accuracy 0.01
+    }
+  ]
+}

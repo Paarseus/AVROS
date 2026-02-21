@@ -1,0 +1,76 @@
+<?xml version="1.0" ?>
+<!--
+  Webots device-to-ROS2 topic mapping for AVROS.
+
+  This is NOT the robot description URDF (that stays in avros_bringup).
+  This file tells webots_ros2_driver which Webots devices publish to
+  which ROS2 topics, matching the real hardware topic names so that
+  EKF, Nav2, and other configs work unchanged.
+-->
+<robot name="avros_webots">
+  <webots>
+    <!-- Vehicle control: cmd_vel → Car API (setCruisingSpeed/setSteeringAngle) -->
+    <plugin type="avros_sim.avros_vehicle_driver.AvrosVehicleDriver" />
+
+    <!-- IMU: InertialUnit + Gyro + Accelerometer → /imu/data -->
+    <device reference="imu_inertial" type="InertialUnit">
+      <ros>
+        <topicName>/imu/data</topicName>
+        <frameName>imu_link</frameName>
+        <alwaysOn>true</alwaysOn>
+      </ros>
+    </device>
+
+    <device reference="imu_gyro" type="Gyro">
+      <ros>
+        <topicName>/imu/gyro</topicName>
+        <frameName>imu_link</frameName>
+        <alwaysOn>true</alwaysOn>
+      </ros>
+    </device>
+
+    <device reference="imu_accel" type="Accelerometer">
+      <ros>
+        <topicName>/imu/accel</topicName>
+        <frameName>imu_link</frameName>
+        <alwaysOn>true</alwaysOn>
+      </ros>
+    </device>
+
+    <!-- LiDAR: Webots VelodynePuck → /velodyne_points -->
+    <device reference="velodyne" type="Lidar">
+      <ros>
+        <topicName>/velodyne_points</topicName>
+        <frameName>velodyne</frameName>
+        <alwaysOn>true</alwaysOn>
+      </ros>
+    </device>
+
+    <!-- Color camera → /camera/camera/color/image_raw -->
+    <device reference="camera_color" type="Camera">
+      <ros>
+        <topicName>/camera/camera/color/image_raw</topicName>
+        <frameName>camera_color_optical_frame</frameName>
+        <alwaysOn>true</alwaysOn>
+      </ros>
+    </device>
+
+    <!-- Depth camera → /camera/camera/aligned_depth_to_color/image_raw -->
+    <device reference="camera_depth" type="RangeFinder">
+      <ros>
+        <topicName>/camera/camera/aligned_depth_to_color/image_raw</topicName>
+        <frameName>camera_depth_optical_frame</frameName>
+        <alwaysOn>true</alwaysOn>
+      </ros>
+    </device>
+
+    <!-- GPS → /gnss -->
+    <device reference="gps" type="GPS">
+      <ros>
+        <topicName>/gnss</topicName>
+        <frameName>imu_link</frameName>
+        <alwaysOn>true</alwaysOn>
+      </ros>
+    </device>
+  </webots>
+</robot>
