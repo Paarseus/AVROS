@@ -53,5 +53,6 @@ class AvrosVehicleDriver:
     def step(self):
         rclpy.spin_once(self.__node, timeout_sec=0)
 
-        self.__robot.setCruisingSpeed(self.__speed)
+        # setCruisingSpeed expects km/h, cmd_vel is m/s
+        self.__robot.setCruisingSpeed(self.__speed * 3.6)
         self.__robot.setSteeringAngle(self.__steering)
