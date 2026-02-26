@@ -18,6 +18,6 @@ camera:
     depth_module.profile: "1280x720x30"
     rgb_camera.color_profile: "1280x720x30"
     align_depth.enable: true
-    pointcloud.enable: false
+    pointcloud.enable: true          # Publishes /camera/camera/depth/color/points for Nav2 costmap
     publish_tf: true
     tf_publish_rate: 0.0           # Static TF only

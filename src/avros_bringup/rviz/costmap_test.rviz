@@ -24,65 +24,37 @@ Visualization Manager:
       Topic:
         Value: /velodyne_points
       Size (m): 0.05
-      Color Transformer: Intensity
+      Color Transformer: AxisColor
+      Axis: Z
       Use Fixed Frame: true
     - Class: rviz_default_plugins/Image
       Enabled: true
-      Name: Camera
+      Name: Color
       Topic:
         Value: /camera/camera/color/image_raw
+    - Class: rviz_default_plugins/Image
+      Enabled: false
+      Name: Depth
+      Topic:
+        Value: /camera/camera/aligned_depth_to_color/image_raw
     - Class: rviz_default_plugins/Map
       Enabled: true
       Name: LocalCostmap
       Topic:
         Value: /local_costmap/costmap
-    - Class: rviz_default_plugins/Map
-      Enabled: true
-      Name: GlobalCostmap
-      Topic:
-        Value: /global_costmap/costmap
-    - Class: rviz_default_plugins/Path
-      Enabled: true
-      Name: GlobalPath
-      Topic:
-        Value: /plan
-      Line Style: Lines
-      Color: 0; 255; 0
-    - Class: rviz_default_plugins/Path
-      Enabled: true
-      Name: LocalPath
-      Topic:
-        Value: /local_plan
-      Line Style: Lines
-      Color: 255; 255; 0
-    - Class: rviz_default_plugins/Path
-      Enabled: true
-      Name: RouteWaypoints
-      Topic:
-        Value: /avros/route_waypoints
-      Line Style: Lines
-      Color: 0; 0; 255
-    - Class: rviz_default_plugins/Odometry
-      Enabled: true
-      Name: FilteredOdom
-      Topic:
-        Value: /odometry/filtered
-      Keep: 100
+      Color Scheme: costmap
+      Draw Behind: false
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: map
+    Fixed Frame: odom
     Frame Rate: 30
   Name: root
   Tools:
     - Class: rviz_default_plugins/MoveCamera
-    - Class: rviz_default_plugins/SetInitialPose
-      Topic: /initialpose
-    - Class: rviz_default_plugins/SetGoal
-      Topic: /goal_pose
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 20
+      Distance: 15
       Target Frame: base_link
-      Pitch: 0.5
+      Pitch: 0.7
       Yaw: 3.14
