@@ -215,7 +215,7 @@ global_costmap:
       height: 100
       resolution: 0.2
       robot_radius: 0.8
-      track_unknown_space: true
+      track_unknown_space: false     # false = free until proven occupied (needed for no-map operation)
       plugins: ["obstacle_layer", "inflation_layer"]
 
       obstacle_layer:
