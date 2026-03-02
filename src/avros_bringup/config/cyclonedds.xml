@@ -5,17 +5,10 @@
   <Domain>
     <General>
       <Interfaces>
-        <NetworkInterface autodetermine="true" priority="default"/>
-        <NetworkInterface name="tailscale0" priority="default"/>
+        <NetworkInterface autodetermine="true"/>
       </Interfaces>
       <AllowMulticast>default</AllowMulticast>
     </General>
-    <Discovery>
-      <Peers>
-        <Peer address="100.116.107.5"/>
-      </Peers>
-      <ParticipantIndex>auto</ParticipantIndex>
-    </Discovery>
     <Internal>
       <SocketReceiveBufferSize min="10MB"/>
     </Internal>
