@@ -39,7 +39,7 @@ xsens_mti_node:
     pub_positionLLA: true
     pub_velocity: true
     pub_nmea: true
-    pub_gnsspose: true
+    pub_gnsspose: false             # Disable — creates TF loop with EKF + navsat_transform
 
     # GNSS lever arm: antenna offset from IMU center [x, y, z] meters
     # TODO: Measure on real vehicle
