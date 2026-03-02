@@ -19,7 +19,7 @@ ekf_filter_node:
                   true,  true,  true,     # roll, pitch, yaw
                   false, false, false,    # vx, vy, vz
                   true,  true,  true,     # vroll, vpitch, vyaw
-                  true,  true,  true]     # ax, ay, az
+                  false, false, false]    # ax, ay, az — disabled, causes Z divergence
     imu0_differential: false
     imu0_relative: false
     imu0_remove_gravitational_acceleration: true
