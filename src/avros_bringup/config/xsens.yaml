@@ -40,6 +40,7 @@ xsens_mti_node:
     pub_velocity: true
     pub_nmea: true
     pub_gnsspose: false             # Disable — creates TF loop with EKF + navsat_transform
+    pub_odometry: false             # Disable — publishes imu_link->base_link TF that conflicts with URDF + EKF (REP 105 violation)
 
     # GNSS lever arm: antenna offset from IMU center [x, y, z] meters
     # TODO: Measure on real vehicle
