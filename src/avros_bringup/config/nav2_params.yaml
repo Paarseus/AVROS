@@ -98,7 +98,7 @@ controller_server:
       regulated_linear_scaling_min_speed: 0.3
       max_angular_accel: 1.0
       allow_reversing: false
-      transform_tolerance: 0.1
+      transform_tolerance: 1.0
 
 planner_server:
   ros__parameters:
