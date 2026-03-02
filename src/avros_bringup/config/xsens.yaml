@@ -12,8 +12,12 @@ xsens_mti_node:
     frame_id: "imu_link"
 
     # Output rate
-    enable_deviceConfig: false     # Set true ONCE to flash config, then false
+    enable_deviceConfig: true      # Set true ONCE to flash config, then false
     output_data_rate: 100          # Hz
+
+    # Baudrate reconfiguration — flash device to 921600
+    enable_setting_baudrate: true
+    set_baudrate_value: 921600
 
     # Publishers
     publisher_queue_size: 5
