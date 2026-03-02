@@ -15,7 +15,11 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import (
+    DeclareLaunchArgument,
+    IncludeLaunchDescription,
+    TimerAction,
+)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -38,6 +42,36 @@ def generate_launch_description():
             'graph_filepath': graph_file,
         },
         convert_types=True,
+    )
+
+    route_server_node = Node(
+        package='nav2_route',
+        executable='route_server',
+        name='route_server',
+        parameters=[
+            configured_params,
+            {'use_sim_time': LaunchConfiguration('use_sim_time')},
+        ],
+        output='screen',
+    )
+
+    # Delay lifecycle manager so route_server has time to register its
+    # lifecycle services with DDS before the manager tries to configure it.
+    route_lifecycle_manager = TimerAction(
+        period=5.0,
+        actions=[
+            Node(
+                package='nav2_lifecycle_manager',
+                executable='lifecycle_manager',
+                name='lifecycle_manager_route',
+                parameters=[{
+                    'autostart': True,
+                    'node_names': ['route_server'],
+                    'bond_timeout': 10.0,
+                }],
+                output='screen',
+            ),
+        ],
     )
 
     return LaunchDescription([
@@ -90,28 +124,8 @@ def generate_launch_description():
         ),
 
         # Route server (nav2_route — graph-based road planner)
-        # On Humble, nav2_bringup does not include route_server, so we launch
-        # it separately with its own lifecycle manager.
-        Node(
-            package='nav2_route',
-            executable='route_server',
-            name='route_server',
-            parameters=[
-                configured_params,
-                {'use_sim_time': LaunchConfiguration('use_sim_time')},
-            ],
-            output='screen',
-        ),
+        route_server_node,
 
-        # Lifecycle manager for route_server
-        Node(
-            package='nav2_lifecycle_manager',
-            executable='lifecycle_manager',
-            name='lifecycle_manager_route',
-            parameters=[{
-                'autostart': True,
-                'node_names': ['route_server'],
-            }],
-            output='screen',
-        ),
+        # Lifecycle manager for route_server (delayed 5s for DDS discovery)
+        route_lifecycle_manager,
     ])
