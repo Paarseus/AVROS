@@ -1,0 +1,225 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{booktabs}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue
+}
+
+\lstset{
+    backgroundcolor=\color{gray!10},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{gray!40},
+    xleftmargin=6pt,
+    xrightmargin=6pt,
+    aboveskip=10pt,
+    belowskip=10pt,
+    columns=fullflexible,
+    keepspaces=true
+}
+
+\title{Intel RealSense D455 Setup Guide\\[4pt]
+\large Jetson Orin~|~JetPack 6~|~ROS2 Humble}
+\author{AVROS Team}
+\date{February 2026}
+
+\begin{document}
+\maketitle
+
+\section{Overview}
+
+The standard apt packages for librealsense and realsense-ros do not work on JetPack~6 (R36.x, kernel 5.15-tegra). The D455 crashes with \texttt{std::bad\_optional\_access} because firmware 5.16+ exposes HID descriptors that the RSUSB userspace backend cannot handle. The fix is:
+
+\begin{enumerate}
+    \item Build librealsense 2.57.6 from source with the RSUSB backend
+    \item Downgrade camera firmware to 5.13.0.50
+    \item Remove the apt librealsense packages (they cause header conflicts)
+    \item Build realsense-ros 4.56.4 from source against the local librealsense
+\end{enumerate}
+
+\subsection*{Target Configuration}
+
+\begin{tabular}{@{}ll@{}}
+    \toprule
+    Component & Version \\
+    \midrule
+    librealsense & 2.57.6 (source, RSUSB backend) \\
+    realsense-ros & 4.56.4 (source) \\
+    D455 firmware & 5.13.0.50 \\
+    ROS2 & Humble \\
+    Platform & Jetson Orin, JetPack 6 \\
+    \bottomrule
+\end{tabular}
+
+\section{Step 1: Build librealsense 2.57.6 from Source}
+
+Clone and build with the RSUSB backend enabled. Do not use the kernel-based backend (HID/V4L2 are broken on JetPack~6).
+
+\begin{lstlisting}
+cd ~
+git clone https://github.com/IntelRealSense/librealsense.git
+cd librealsense
+git checkout v2.57.6
+
+mkdir -p build && cd build
+cmake .. \
+  -DFORCE_RSUSB_BACKEND=ON \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DBUILD_EXAMPLES=true \
+  -DBUILD_WITH_CUDA=true
+make -j6
+sudo make install
+sudo ldconfig
+\end{lstlisting}
+
+Use \texttt{-j6} and not \texttt{-j8} to avoid running out of memory on the Orin. This installs headers to \texttt{/usr/local/include/} and libraries to \texttt{/usr/local/lib/}.
+
+\textbf{Verify:}
+\begin{lstlisting}
+rs-enumerate-devices --compact
+\end{lstlisting}
+You should see the D455 listed. If it shows a firmware version $\geq$5.16, proceed to Step~2.
+
+\section{Step 2: Downgrade D455 Firmware to 5.13.0.50}
+
+Firmware 5.16+ causes the \texttt{bad\_optional\_access} crash. Downgrade to 5.13.0.50.
+
+\begin{lstlisting}
+wget https://librealsense.intel.com/Releases/RS4xx/FW/D4XX_FW_Image-5.13.0.50.bin \
+  -O ~/D4XX_FW_Image-5.13.0.50.bin
+
+rs-fw-update -f ~/D4XX_FW_Image-5.13.0.50.bin
+\end{lstlisting}
+
+The camera must be connected via USB during the flash. Verify afterwards:
+
+\begin{lstlisting}
+rs-enumerate-devices --compact
+# Expected: Intel RealSense D455  5.13.0.50  USB 3.2
+\end{lstlisting}
+
+\section{Step 3: Remove apt librealsense Packages}
+
+The apt package \texttt{ros-humble-librealsense2} installs v2.56.4 headers at \texttt{/opt/ros/humble/include/librealsense2/}. These shadow the correct v2.57.6 headers at \texttt{/usr/local/include/librealsense2/} because CMake's ament include path ordering puts apt headers first. Removing the apt package is the only reliable fix.
+
+\begin{lstlisting}
+sudo apt remove ros-humble-librealsense2 ros-humble-librealsense2-dbgsym
+\end{lstlisting}
+
+This also removes \texttt{ros-humble-realsense2-camera} (the apt version). That is fine---you will build realsense-ros from source in the next step.
+
+\section{Step 4: Build realsense-ros 4.56.4 from Source}
+
+Clone realsense-ros 4.56.4 into your workspace's \texttt{src/} directory:
+
+\begin{lstlisting}
+cd ~/your_ws/src
+git clone https://github.com/IntelRealSense/realsense-ros.git
+cd realsense-ros
+git checkout 4.56.4
+\end{lstlisting}
+
+Build, pointing CMake at the local librealsense:
+
+\begin{lstlisting}
+cd ~/your_ws
+colcon build --symlink-install \
+  --packages-select realsense2_camera_msgs realsense2_description realsense2_camera \
+  --cmake-args -Drealsense2_DIR=/usr/local/lib/cmake/realsense2
+source install/setup.bash
+\end{lstlisting}
+
+\textbf{Why 4.56.4 and not 4.57.6?} Tag 4.57.6 adds D457 safety camera features (\texttt{RS2\_STREAM\_SAFETY}, \texttt{RS2\_STREAM\_LABELED\_POINT\_CLOUD}, etc.) that do not exist in librealsense 2.57.6. The build fails with undeclared identifier errors. Tag 4.56.4 requires \texttt{find\_package(realsense2 2.56)}, which is satisfied by 2.57.6.
+
+\section{Step 5: Verify}
+
+\begin{lstlisting}
+source /opt/ros/humble/setup.bash
+source ~/your_ws/install/setup.bash
+
+ros2 launch realsense2_camera rs_launch.py \
+  camera_name:=camera \
+  enable_color:=true \
+  enable_depth:=true \
+  enable_gyro:=false \
+  enable_accel:=false
+\end{lstlisting}
+
+Expected output:
+\begin{lstlisting}
+Built with LibRealSense v2.57.6
+Running with LibRealSense v2.57.6
+Device Name: Intel RealSense D455
+Device FW version: 5.13.0.50
+RealSense Node Is Up!
+\end{lstlisting}
+
+Set \texttt{enable\_gyro} and \texttt{enable\_accel} to \texttt{false}. The D455 IMU does not work with the RSUSB backend on JetPack~6; use an external IMU if needed.
+
+\subsection*{Check Topics}
+
+\begin{lstlisting}
+ros2 topic hz /camera/camera/color/image_raw
+# Expected: ~30 Hz
+
+ros2 topic hz /camera/camera/aligned_depth_to_color/image_raw
+# Expected: ~30 Hz
+\end{lstlisting}
+
+\section{Troubleshooting}
+
+\begin{tabular}{@{}p{0.42\textwidth}p{0.53\textwidth}@{}}
+    \toprule
+    Problem & Fix \\
+    \midrule
+    \texttt{bad\_optional\_access} crash on launch &
+    Firmware is $\geq$5.16. Downgrade to 5.13.0.50 (Step~2). \\
+
+    \addlinespace
+    ``Built with LibRealSense v2.56.4'' version mismatch warning &
+    apt headers are shadowing local headers. Remove apt package (Step~3). \\
+
+    \addlinespace
+    USB interface busy on relaunch &
+    Previous node still holds the device. Run: \texttt{pkill -f realsense2\_camera\_node \&\& sleep 2} \\
+
+    \addlinespace
+    \texttt{control\_transfer returned error} warnings &
+    Normal with RSUSB backend on JetPack~6. Non-fatal, does not affect streaming. \\
+
+    \addlinespace
+    ``No HID info provided, IMU is disabled'' &
+    Expected with RSUSB backend. D455 HID/IMU is not available. \\
+
+    \addlinespace
+    \texttt{rgb\_camera.power\_line\_frequency} range error &
+    Cosmetic. D455 FW 5.13.0.50 supports range [0,2] but driver sends 3. No effect. \\
+
+    \addlinespace
+    Stale build artifacts after version change &
+    Run \texttt{rm -rf build/ install/} before rebuilding. Old \texttt{.o} files cause subtle errors. \\
+
+    \addlinespace
+    realsense-ros 4.57.6 compile error (\texttt{RS2\_STREAM\_SAFETY}) &
+    Use 4.56.4 instead. See Step~4. \\
+    \bottomrule
+\end{tabular}
+
+\section*{References}
+
+\begin{itemize}[nosep]
+    \item \url{https://github.com/IntelRealSense/librealsense/issues/14169} --- D455 + RSUSB + FW 5.16+
+    \item \url{https://github.com/IntelRealSense/librealsense/issues/13341} --- JetPack 6 HID removal
+    \item \url{https://github.com/IntelRealSense/realsense-ros/issues/3416} --- exact crash report
+\end{itemize}
+
+\end{document}
