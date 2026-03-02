@@ -1,9 +1,17 @@
-"""Launch sensors + EKF + navsat_transform for localized operation.
+"""Dual EKF + navsat_transform for GPS-based localization.
+
+Based on: https://github.com/ros-navigation/navigation2_tutorials
+  nav2_gps_waypoint_follower_demo/launch/dual_ekf_navsat.launch.py
 
 Launches:
   - Everything from sensors.launch.py
-  - robot_localization EKF (fuses IMU + GPS)
-  - navsat_transform_node (GPS -> map frame)
+  - EKF #1 (odom): IMU only -> odom -> base_link (smooth, local)
+  - EKF #2 (map):  IMU + GPS -> map -> odom (GPS-anchored, global)
+  - navsat_transform_node: GPS -> Cartesian odometry for EKF #2
+
+TF tree:
+  map -> odom -> base_link
+  (EKF map)  (EKF odom)
 """
 
 import os
@@ -43,31 +51,56 @@ def generate_launch_description():
             }.items(),
         ),
 
-        # robot_localization EKF
+        # EKF #1: Local odometry (odom -> base_link)
+        # Fuses IMU only for smooth local navigation
+        # Output: /odometry/filtered (used by Nav2 controller + local costmap)
         Node(
             package='robot_localization',
             executable='ekf_node',
-            name='ekf_filter_node',
+            name='ekf_filter_node_odom',
             parameters=[
                 ekf_config,
                 {'use_sim_time': LaunchConfiguration('use_sim_time')},
             ],
+            remappings=[
+                ('odometry/filtered', '/odometry/filtered'),
+            ],
             output='screen',
         ),
 
-        # navsat_transform_node: GPS -> map frame
+        # EKF #2: Global map (map -> odom)
+        # Fuses IMU + GPS for GPS-anchored global position
+        # Output: /odometry/global (consumed by navsat_transform_node)
+        Node(
+            package='robot_localization',
+            executable='ekf_node',
+            name='ekf_filter_node_map',
+            parameters=[
+                ekf_config,
+                {'use_sim_time': LaunchConfiguration('use_sim_time')},
+            ],
+            remappings=[
+                ('odometry/filtered', '/odometry/global'),
+            ],
+            output='screen',
+        ),
+
+        # navsat_transform_node: GPS -> Cartesian odometry
+        # Reads global EKF output, publishes /odometry/gps for EKF #2
         Node(
             package='robot_localization',
             executable='navsat_transform_node',
-            name='navsat_transform_node',
+            name='navsat_transform',
             parameters=[
                 navsat_config,
                 {'use_sim_time': LaunchConfiguration('use_sim_time')},
             ],
             remappings=[
-                ('imu', '/imu/data'),
+                ('imu/data', '/imu/data'),
                 ('gps/fix', '/gnss'),
-                ('odometry/filtered', '/odometry/filtered'),
+                ('gps/filtered', '/gps/filtered'),
+                ('odometry/gps', '/odometry/gps'),
+                ('odometry/filtered', '/odometry/global'),
             ],
             output='screen',
         ),
