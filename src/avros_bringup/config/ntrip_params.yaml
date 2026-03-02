@@ -8,9 +8,9 @@
 
 ntrip_client:
   ros__parameters:
-    host: "rtk2go.com"
+    host: "ntrip.earthscope.org"
     port: 2101
-    mountpoint: "CHANGE_ME"
-    username: ""
-    password: ""
+    mountpoint: "PSDM_RTCM3P3"
+    username: "stoic_panini"
+    password: "z0OYEP3Bwg0hdxvN"
     update_rate: 1.0
