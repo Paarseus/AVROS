@@ -3,7 +3,7 @@
   Uses ComputeRoute (nav2_route) instead of ComputePathToPose.
   No spin/backup recovery — Ackermann vehicle cannot rotate in place.
 -->
-<root BTCPP_format="4" main_tree_to_execute="MainTree">
+<root main_tree_to_execute="MainTree">
   <BehaviorTree ID="MainTree">
     <PipelineSequence name="NavigateWithReplanning">
       <RateController hz="0.5">
