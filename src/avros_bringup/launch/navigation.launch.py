@@ -6,6 +6,7 @@ Launches:
   - Nav2 servers (controller, smoother, planner, route_server, behavior,
     velocity_smoother, bt_navigator)
   - Single lifecycle manager (transitions servers in order)
+  - foxglove_bridge (WebSocket server for remote visualization)
 
 Nav2 servers are launched directly (not via nav2_bringup) so that
 route_server can be included in the lifecycle manager's ordered node list.
@@ -117,6 +118,18 @@ def generate_launch_description():
             parameters=[{
                 'autostart': True,
                 'node_names': lifecycle_nodes,
+            }],
+            output='screen',
+        ),
+
+        # Foxglove bridge (WebSocket on port 8765 for remote visualization)
+        Node(
+            package='foxglove_bridge',
+            executable='foxglove_bridge',
+            name='foxglove_bridge',
+            parameters=[{
+                'port': 8765,
+                'use_sim_time': use_sim_time,
             }],
             output='screen',
         ),
