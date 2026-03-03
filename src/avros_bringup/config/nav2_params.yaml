@@ -19,20 +19,17 @@ bt_navigator:
     # Humble requires explicit plugin list (Jazzy auto-discovers)
     # Only plugins used by navigate_route_graph.xml are loaded
     plugin_lib_names:
-      - nav2_compute_path_to_pose_action_bt_node
-      - nav2_smooth_path_action_bt_node
+      - nav2_compute_route_bt_node
       - nav2_follow_path_action_bt_node
-      - nav2_back_up_action_bt_node
+      - nav2_is_path_valid_condition_bt_node
       - nav2_wait_action_bt_node
       - nav2_clear_costmap_service_bt_node
       - nav2_goal_updated_condition_bt_node
       - nav2_globally_updated_goal_condition_bt_node
-      - nav2_is_path_valid_condition_bt_node
       - nav2_rate_controller_bt_node
       - nav2_recovery_node_bt_node
       - nav2_pipeline_sequence_bt_node
       - nav2_round_robin_node_bt_node
-      - nav2_compute_route_bt_node
 
 controller_server:
   ros__parameters:
@@ -74,6 +71,7 @@ controller_server:
       regulated_linear_scaling_min_speed: 0.3
       max_angular_accel: 1.0
       allow_reversing: false
+      max_robot_pose_search_dist: 999.0   # default is costmap extent (~14m); route paths can start far from robot
       transform_tolerance: 1.0
 
 planner_server:
@@ -102,14 +100,6 @@ planner_server:
       change_penalty: 0.0
       non_straight_penalty: 1.2
       cost_penalty: 2.0
-
-smoother_server:
-  ros__parameters:
-    smoother_plugins: ["simple_smoother"]
-    simple_smoother:
-      plugin: "nav2_smoother::SimpleSmoother"
-      tolerance: 1.0e-10
-      do_refinement: true
 
 behavior_server:
   ros__parameters:
@@ -235,6 +225,8 @@ route_server:
     route_frame: "map"
     max_planning_time: 2.0
     path_density: 0.5
+    smooth_corners: true
+    smoothing_radius: 2.31          # match vehicle min turning radius
     graph_filepath: ""   # Overridden at launch time
     graph_file_loader: "GeoJsonGraphFileLoader"
     GeoJsonGraphFileLoader:

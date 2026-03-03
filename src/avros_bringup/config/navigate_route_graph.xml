@@ -1,46 +1,46 @@
 <!--
   Navigation BT for AVROS (Humble, BehaviorTree.CPP v3).
 
-  Planning: ComputeRoute (road graph) + SmoothPath, with ComputePathToPose fallback.
-  Recovery: ClearCostmaps, Wait, BackUp (no Spin — Ackermann vehicle).
+  ComputeRoute (nav2_route) plans on the campus road graph and outputs a dense
+  nav_msgs/Path (controlled by route_server path_density param).  That path goes
+  straight to FollowPath (Regulated Pure Pursuit) — no intermediate planner needed.
 
-  Three recovery layers (matches official Nav2 route BT pattern):
-    1. Outer RecoveryNode (6 retries): ClearCostmaps → Wait → BackUp
-    2. Inner RecoveryNode around planning (1 retry): ClearGlobalCostmap
-    3. Inner RecoveryNode around FollowPath (1 retry): ClearLocalCostmap
+  Replanning: route is recomputed at 0.5 Hz, but only when the goal changes or
+  the current path becomes invalid (obstacle blocks it).
+
+  Recovery: ClearCostmaps + Wait (no Spin/BackUp — Ackermann vehicle).
 -->
 <root main_tree_to_execute="MainTree">
   <BehaviorTree ID="MainTree">
     <RecoveryNode number_of_retries="6" name="NavigateRecovery">
       <PipelineSequence name="NavigateWithReplanning">
+
+        <!-- Compute route on road graph; replan only when needed -->
         <RateController hz="0.5">
           <RecoveryNode number_of_retries="1" name="ComputeRoute">
             <Fallback>
-              <!-- Skip replanning if goal unchanged and current path is still valid -->
+              <!-- Skip replanning if goal unchanged AND path still valid -->
               <ReactiveSequence>
                 <Inverter>
                   <GlobalUpdatedGoal/>
                 </Inverter>
                 <IsPathValid path="{path}"/>
               </ReactiveSequence>
-              <!-- Primary: road-graph path + smoothing for sharp graph corners -->
-              <Sequence name="ComputeAndSmooth">
-                <ComputeRoute goal="{goal}" path="{path}" use_poses="true"/>
-                <SmoothPath unsmoothed_path="{path}" smoothed_path="{path}"
-                            smoother_id="simple_smoother"/>
-              </Sequence>
-              <!-- Fallback: freespace Dubin path (works anywhere, ignores road graph) -->
-              <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
+              <!-- Otherwise compute a new route -->
+              <ComputeRoute goal="{goal}" path="{path}" route="{route}" use_poses="true"/>
             </Fallback>
             <ClearEntireCostmap name="ClearGlobalCostmap"
                                 service_name="global_costmap/clear_entirely_global_costmap"/>
           </RecoveryNode>
         </RateController>
+
+        <!-- Follow the dense path from route_server -->
         <RecoveryNode number_of_retries="1" name="FollowPath">
           <FollowPath path="{path}" controller_id="FollowPath"/>
           <ClearEntireCostmap name="ClearLocalCostmap"
                               service_name="local_costmap/clear_entirely_local_costmap"/>
         </RecoveryNode>
+
       </PipelineSequence>
       <ReactiveFallback name="RecoveryFallback">
         <GoalUpdated/>
@@ -52,7 +52,6 @@
                                 service_name="global_costmap/clear_entirely_global_costmap"/>
           </Sequence>
           <Wait wait_duration="5.0"/>
-          <BackUp backup_dist="0.30" backup_speed="0.15"/>
         </RoundRobin>
       </ReactiveFallback>
     </RecoveryNode>
