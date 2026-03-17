@@ -85,7 +85,6 @@ def generate_launch_description():
             'nav2_pipeline_sequence_bt_node',
             'nav2_round_robin_node_bt_node',
             'nav2_goal_reached_condition_bt_node',
-            'nav2_reactive_sequence_bt_node',
         ],
     }
 
