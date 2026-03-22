@@ -93,6 +93,16 @@ def generate_launch_description():
             description='Enable NTRIP client for RTK corrections'
         ),
 
+        DeclareLaunchArgument(
+            'enable_velodyne', default_value='true',
+            description='Enable Velodyne VLP-16 LiDAR'
+        ),
+
+        DeclareLaunchArgument(
+            'enable_realsense', default_value='true',
+            description='Enable RealSense D455 camera'
+        ),
+
         # Localization (sensors + EKF + navsat)
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -101,6 +111,8 @@ def generate_launch_description():
             launch_arguments={
                 'use_sim_time': use_sim_time,
                 'enable_ntrip': LaunchConfiguration('enable_ntrip'),
+                'enable_velodyne': LaunchConfiguration('enable_velodyne'),
+                'enable_realsense': LaunchConfiguration('enable_realsense'),
             }.items(),
         ),
 

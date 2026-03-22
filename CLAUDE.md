@@ -8,6 +8,7 @@ Migration of the AV2.1-API autonomous vehicle codebase to ROS2 (Humble). Five cu
 **Build:** `cd ~/AVROS && colcon build --symlink-install`
 **Source overlay:** `source install/setup.bash`
 **Target hardware:** NVIDIA Jetson Orin (Ubuntu, `ssh jetson` = 100.93.121.3 via Tailscale, user `dinosaur`)
+**SSH shortcut:** `ssh jetson` (configured in `~/.ssh/config`)
 
 ---
 

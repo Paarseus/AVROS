@@ -49,7 +49,7 @@ controller_server:
 
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
-      required_movement_radius: 0.5
+      required_movement_radius: 0.3
       movement_time_allowance: 120.0    # 2 min — patient enough for pedestrians/temporary obstacles
 
     general_goal_checker:
@@ -60,7 +60,7 @@ controller_server:
 
     FollowPath:
       plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
-      desired_linear_vel: 1.5
+      desired_linear_vel: 1.0
       lookahead_dist: 3.0
       min_lookahead_dist: 3.0
       max_lookahead_dist: 8.0
@@ -70,7 +70,7 @@ controller_server:
       use_velocity_scaled_lookahead_dist: true
       min_approach_linear_velocity: 0.3
       approach_velocity_scaling_dist: 3.0      # must be > xy_goal_tolerance for deceleration to work
-      use_collision_detection: true
+      use_collision_detection: false
       max_allowed_time_to_collision_up_to_carrot: 1.0
       use_regulated_linear_velocity_scaling: true
       use_cost_regulated_linear_velocity_scaling: false
@@ -78,7 +78,7 @@ controller_server:
       regulated_linear_scaling_min_speed: 0.3
       max_angular_accel: 1.0
       allow_reversing: false
-      max_robot_pose_search_dist: 15.0    # keep Pure Pursuit on current path segment through turns
+      max_robot_pose_search_dist: 999.0    # search entire path — skips route waypoints behind the robot
       transform_tolerance: 1.0
 
 planner_server:
@@ -135,41 +135,8 @@ local_costmap:
       height: 50
       resolution: 0.2
       robot_radius: 0.8
-      plugins: ["voxel_layer", "inflation_layer"]
-
-      voxel_layer:
-        plugin: "nav2_costmap_2d::VoxelLayer"
-        enabled: true
-        publish_voxel_map: false
-        origin_z: 0.0
-        z_resolution: 0.2
-        z_voxels: 10
-        max_obstacle_height: 2.0
-        mark_threshold: 0
-        observation_sources: velodyne_points camera_depth
-        velodyne_points:
-          topic: /velodyne_points
-          max_obstacle_height: 2.0
-          min_obstacle_height: 0.1       # Filter ground (relative to sensor frame)
-          obstacle_max_range: 15.0
-          obstacle_min_range: 1.0        # Ignore car body
-          clearing: true
-          marking: true
-          data_type: "PointCloud2"
-          raytrace_max_range: 20.0
-          raytrace_min_range: 1.0
-        camera_depth:
-          topic: /camera/camera/depth/color/points
-          sensor_frame: camera_depth_optical_frame
-          max_obstacle_height: 1.5       # Camera mounted ~0.8m, detect up to 1.5m above sensor
-          min_obstacle_height: 0.1       # Filter ground
-          obstacle_max_range: 5.0        # D455 effective depth range
-          obstacle_min_range: 0.3        # Min reliable depth
-          clearing: false                # LiDAR handles clearing (360°); camera only marks
-          marking: true
-          data_type: "PointCloud2"       # VoxelLayer only supports PointCloud2 or LaserScan
-          raytrace_max_range: 5.0
-          raytrace_min_range: 0.3
+      plugins: ["inflation_layer"]
+      # voxel_layer disabled — no LiDAR/camera for obstacle avoidance
 
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
@@ -189,23 +156,8 @@ global_costmap:
       resolution: 0.2
       robot_radius: 0.8
       track_unknown_space: false     # false = free until proven occupied (needed for no-map operation)
-      plugins: ["obstacle_layer", "inflation_layer"]
-
-      obstacle_layer:
-        plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: true
-        observation_sources: velodyne_points
-        velodyne_points:
-          topic: /velodyne_points
-          max_obstacle_height: 2.0
-          min_obstacle_height: 0.1
-          obstacle_max_range: 50.0
-          obstacle_min_range: 1.0
-          clearing: true
-          marking: true
-          data_type: "PointCloud2"
-          raytrace_max_range: 50.0
-          raytrace_min_range: 1.0
+      plugins: ["inflation_layer"]
+      # obstacle_layer disabled — no LiDAR for obstacle avoidance
 
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"

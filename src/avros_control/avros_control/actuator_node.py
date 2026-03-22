@@ -8,6 +8,7 @@ Ports logic from AV2.1-API:
 Subscribes:
   /cmd_vel                  geometry_msgs/Twist
   /avros/actuator_command   avros_msgs/ActuatorCommand (direct control / e-stop)
+  /filter/twist             geometry_msgs/TwistStamped (Xsens speed feedback for PID)
 
 Publishes:
   /avros/actuator_state     avros_msgs/ActuatorState @ 20Hz
@@ -20,7 +21,7 @@ import threading
 
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, TwistStamped
 from avros_msgs.msg import ActuatorCommand, ActuatorState
 
 
@@ -123,6 +124,7 @@ class ActuatorNode(Node):
             clock_type=self.get_clock().clock_type
         )  # epoch 0 = never
         self._last_linear_x = 0.0
+        self._actual_speed = 0.0  # from Xsens /filter/twist
 
         # Actual state from Teensy response
         self._actual_estop = False
@@ -138,6 +140,10 @@ class ActuatorNode(Node):
         self._actuator_cmd_sub = self.create_subscription(
             ActuatorCommand, '/avros/actuator_command',
             self._actuator_cmd_callback, 10
+        )
+        self._twist_sub = self.create_subscription(
+            TwistStamped, '/filter/twist',
+            self._twist_callback, 10
         )
 
         # Publisher
@@ -184,6 +190,13 @@ class ActuatorNode(Node):
         else:
             pass  # keep current mode
 
+    def _twist_callback(self, msg: TwistStamped):
+        """Update actual speed from Xsens onboard filter."""
+        # Compute ground speed from vx/vy (ENU frame)
+        vx = msg.twist.linear.x
+        vy = msg.twist.linear.y
+        self._actual_speed = math.sqrt(vx * vx + vy * vy)
+
     def _actuator_cmd_callback(self, msg: ActuatorCommand):
         """Handle direct actuator commands (direct control / e-stop)."""
         self._last_actuator_cmd_time = self.get_clock().now()
@@ -222,8 +235,9 @@ class ActuatorNode(Node):
             # Direct control path — values already set by callback
             self._speed_pid.reset()
         elif dt_since_cmd_vel < self._cmd_vel_timeout:
-            # PID speed control: error = desired_speed - 0 (no odometry yet)
-            pid_output = self._speed_pid.compute(self._last_linear_x, self._dt)
+            # PID speed control: error = desired_speed - actual_speed
+            speed_error = self._last_linear_x - self._actual_speed
+            pid_output = self._speed_pid.compute(speed_error, self._dt)
 
             if pid_output >= 0:
                 self._throttle = min(pid_output, self._max_throttle)

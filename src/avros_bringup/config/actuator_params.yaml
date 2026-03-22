@@ -11,9 +11,9 @@ actuator_node:
     steering_sign: -1              # Hardware sign convention
 
     # Speed PID (linear.x -> throttle/brake)
-    pid_kp: 0.55
-    pid_ki: 0.055
-    pid_kd: 0.08
+    pid_kp: 0.34
+    pid_ki: 0.15
+    pid_kd: 0.065
     max_throttle: 0.6              # Safety limit
 
     # Timing

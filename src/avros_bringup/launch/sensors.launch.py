@@ -48,6 +48,16 @@ def generate_launch_description():
             description='Enable NTRIP client for RTK corrections'
         ),
 
+        DeclareLaunchArgument(
+            'enable_velodyne', default_value='true',
+            description='Enable Velodyne VLP-16 LiDAR'
+        ),
+
+        DeclareLaunchArgument(
+            'enable_realsense', default_value='true',
+            description='Enable RealSense D455 camera'
+        ),
+
         # robot_state_publisher: URDF -> static TF
         Node(
             package='robot_state_publisher',
@@ -68,6 +78,7 @@ def generate_launch_description():
             name='velodyne_driver_node',
             parameters=[velodyne_config],
             output='screen',
+            condition=IfCondition(LaunchConfiguration('enable_velodyne')),
         ),
 
         # Velodyne raw packets -> PointCloud2
@@ -77,6 +88,7 @@ def generate_launch_description():
             name='velodyne_transform_node',
             parameters=[velodyne_config],
             output='screen',
+            condition=IfCondition(LaunchConfiguration('enable_velodyne')),
         ),
 
         # RealSense D455 (built from source, RSUSB backend)
@@ -86,6 +98,7 @@ def generate_launch_description():
             name='camera',
             parameters=[realsense_config],
             output='screen',
+            condition=IfCondition(LaunchConfiguration('enable_realsense')),
         ),
 
         # Xsens MTi-680G IMU/GNSS
