@@ -132,7 +132,7 @@ local_costmap:
         z_voxels: 10
         max_obstacle_height: 2.0
         mark_threshold: 0
-        observation_sources: velodyne_points camera_depth
+        observation_sources: velodyne_points camera_depth semantic_obstacles
         velodyne_points:
           topic: /velodyne_points
           max_obstacle_height: 2.0
@@ -154,6 +154,18 @@ local_costmap:
           clearing: false                # LiDAR handles clearing (360°); camera only marks
           marking: true
           data_type: "PointCloud2"       # VoxelLayer only supports PointCloud2 or LaserScan
+          raytrace_max_range: 5.0
+          raytrace_min_range: 0.3
+        semantic_obstacles:
+          topic: /perception/obstacle_cloud
+          sensor_frame: camera_depth_optical_frame
+          data_type: "PointCloud2"
+          max_obstacle_height: 1.5
+          min_obstacle_height: 0.0       # No ground filter needed — segmentation handles it
+          obstacle_max_range: 5.0        # D455 effective depth range
+          obstacle_min_range: 0.3
+          clearing: false                # LiDAR handles 360° clearing
+          marking: true
           raytrace_max_range: 5.0
           raytrace_min_range: 0.3
 

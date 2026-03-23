@@ -7,6 +7,7 @@ Launches:
     velocity_smoother, bt_navigator)
   - Single lifecycle manager (transitions servers in order)
   - foxglove_bridge (WebSocket server for remote visualization)
+  - perception.launch.py (SegFormer segmentation, optional via enable_perception)
 
 Nav2 servers are launched directly (not via nav2_bringup) so that
 route_server can be included in the lifecycle manager's ordered node list.
@@ -21,6 +22,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -103,6 +105,11 @@ def generate_launch_description():
             description='Enable RealSense D455 camera'
         ),
 
+        DeclareLaunchArgument(
+            'enable_perception', default_value='false',
+            description='Enable SegFormer semantic segmentation (requires TensorRT engine)'
+        ),
+
         # Localization (sensors + EKF + navsat)
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -126,6 +133,15 @@ def generate_launch_description():
                 {'use_sim_time': use_sim_time},
             ],
             output='screen',
+        ),
+
+        # Semantic segmentation perception (optional — requires TensorRT engine on Jetson)
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(pkg_dir, 'launch', 'perception.launch.py')
+            ),
+            launch_arguments={'use_sim_time': use_sim_time}.items(),
+            condition=IfCondition(LaunchConfiguration('enable_perception')),
         ),
 
         # Nav2 servers
