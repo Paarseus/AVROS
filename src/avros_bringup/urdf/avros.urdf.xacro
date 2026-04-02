@@ -103,4 +103,61 @@
     <origin xyz="1.0 0.0 0.8" rpy="0 0 0"/>
   </joint>
 
+  <!-- ============================================================ -->
+  <!-- Camera: ZED X Left (GMSL)                                    -->
+  <!-- TODO: Measure exact mount position on real vehicle           -->
+  <!-- ============================================================ -->
+  <link name="zed_left_camera_center">
+    <visual>
+      <geometry>
+        <box size="0.04 0.17 0.03"/>
+      </geometry>
+      <material name="dark_grey"/>
+    </visual>
+  </link>
+  <joint name="zed_left_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="zed_left_camera_center"/>
+    <!-- TODO: Measure on vehicle. Approximate: left side, facing left -->
+    <origin xyz="-0.6 0.35 0.6" rpy="0 0 1.5708"/>
+  </joint>
+
+  <!-- ============================================================ -->
+  <!-- Camera: ZED X Right (GMSL)                                   -->
+  <!-- TODO: Measure exact mount position on real vehicle           -->
+  <!-- ============================================================ -->
+  <link name="zed_right_camera_center">
+    <visual>
+      <geometry>
+        <box size="0.04 0.17 0.03"/>
+      </geometry>
+      <material name="dark_grey"/>
+    </visual>
+  </link>
+  <joint name="zed_right_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="zed_right_camera_center"/>
+    <!-- TODO: Measure on vehicle. Approximate: right side, facing right -->
+    <origin xyz="0.6 0.35 0.6" rpy="0 0 -1.5708"/>
+  </joint>
+
+  <!-- ============================================================ -->
+  <!-- Camera: ZED X Back (GMSL)                                    -->
+  <!-- TODO: Measure exact mount position on real vehicle           -->
+  <!-- ============================================================ -->
+  <link name="zed_back_camera_center">
+    <visual>
+      <geometry>
+        <box size="0.04 0.17 0.03"/>
+      </geometry>
+      <material name="dark_grey"/>
+    </visual>
+  </link>
+  <joint name="zed_back_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="zed_back_camera_center"/>
+    <!-- TODO: Measure on vehicle. Approximate: rear center, facing back -->
+    <origin xyz="-0.75 0.0 0.6" rpy="0 0 3.14159"/>
+  </joint>
+
 </robot>

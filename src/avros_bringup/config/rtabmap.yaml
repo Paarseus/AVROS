@@ -1,0 +1,76 @@
+# RTAB-Map SLAM configuration
+# Adapted from cbmusonda/avl_slam — outdoor ICP tuning for VLP-16 + multicam RGB-D
+# Used by slam_navigation.launch.py
+
+# Shared by both icp_odometry and rtabmap nodes
+/**:
+  ros__parameters:
+    # ── Frames ────────────────────────────────────────────────
+    frame_id: "base_link"
+    odom_frame_id: "odom"
+    map_frame_id: "map"
+
+    # ── ICP LiDAR Odometry ───────────────────────────────────
+    Icp/VoxelSize: "0.3"
+    Icp/PointToPlane: "true"
+    Icp/Iterations: "20"
+    Icp/MaxCorrespondenceDistance: "0.15"
+    Icp/MaxTranslation: "3.0"
+    Icp/CorrespondenceRatio: "0.1"
+    Icp/PointToPlaneK: "20"
+
+    # ── Odometry ─────────────────────────────────────────────
+    Odom/Strategy: "0"
+    Odom/ResetCountdown: "1"
+    OdomF2M/MaxSize: "10000"
+
+    # ── Core SLAM ─────────────────────────────────────────────
+    Rtabmap/DetectionRate: "1"
+    Rtabmap/TimeThr: "700"
+    Rtabmap/MemoryThr: "0"
+    Rtabmap/LoopThr: "0.11"
+
+    # ── Memory ────────────────────────────────────────────────
+    Mem/IncrementalMemory: "true"
+    Mem/InitWMWithAllNodes: "false"
+    Mem/STMSize: "10"
+    Mem/UseOdomGravity: "true"
+
+    # ── Visual features ───────────────────────────────────────
+    Vis/MaxFeatures: "400"
+    Vis/MinInliers: "15"
+    Vis/InlierDistance: "0.1"
+    SURF/HessianThreshold: "300"
+
+    # ── Loop closure ──────────────────────────────────────────
+    Reg/Strategy: "1"
+    RGBD/LoopClosureIdentityGuess: "true"
+    RGBD/LinearUpdate: "0.1"
+    RGBD/AngularUpdate: "0.05"
+    RGBD/NewMapOdomChangeDistance: "0"
+    RGBD/OptimizeFromGraphEnd: "false"
+    RGBD/OptimizeMaxError: "3.0"
+    RGBD/CreateOccupancyGrid: "false"
+
+    # ── Graph optimization ────────────────────────────────────
+    Optimizer/Strategy: "1"
+    Optimizer/Iterations: "60"
+    Optimizer/Epsilon: "0.00001"
+    Optimizer/Robust: "true"
+    Optimizer/PriorsIgnored: "false"
+
+    # ── Point cloud filtering ─────────────────────────────────
+    cloud_voxel_size: 0.05
+    cloud_output_voxelized: true
+    cloud_max_depth: 20.0
+    cloud_min_depth: 0.3
+
+    # ── 3D Grid (disabled — Nav2 costmaps handle obstacles) ──
+    Grid/3D: "true"
+    Grid/CellSize: "0.05"
+    Grid/RangeMax: "50.0"
+    Grid/RangeMin: "0.5"
+    Grid/MaxGroundHeight: "0.1"
+    Grid/MaxObstacleHeight: "2.0"
+    Grid/ClusterRadius: "0.1"
+    Grid/GroundIsObstacle: "false"
