@@ -7,10 +7,13 @@
   stable — Pure Pursuit can steer back to the path after overshooting turns.
   ReactiveFallback stops FollowPath when the robot reaches the original
   nav goal (handles route paths that extend past the goal to distant nodes).
+
+  On collision: brake, wait 5s for obstacle to clear, retry up to 60 times
+  (~5 min of waiting total before giving up).
 -->
 <root main_tree_to_execute="MainTree">
   <BehaviorTree ID="MainTree">
-    <RecoveryNode number_of_retries="3" name="NavigateRecovery">
+    <RecoveryNode number_of_retries="999" name="NavigateRecovery">
       <Sequence name="NavigateSequence">
         <ComputeRoute goal="{goal}" path="{path}" route="{route}" use_poses="true"/>
         <ReactiveFallback name="FollowUntilGoalReached">
@@ -21,7 +24,7 @@
       <Sequence name="RecoveryActions">
         <ClearEntireCostmap name="ClearLocalCostmap" service_name="local_costmap/clear_entirely_local_costmap"/>
         <ClearEntireCostmap name="ClearGlobalCostmap" service_name="global_costmap/clear_entirely_global_costmap"/>
-        <Wait wait_duration="3"/>
+        <Wait wait_duration="5"/>
       </Sequence>
     </RecoveryNode>
   </BehaviorTree>
