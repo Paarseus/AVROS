@@ -19,3 +19,11 @@ repositories:
     type: git
     url: https://github.com/stereolabs/zed-ros2-wrapper.git
     version: master
+  semantic_segmentation_layer:
+    type: git
+    url: https://github.com/kiwicampus/semantic_segmentation_layer.git
+    version: humble
+  navigation2_tutorials:
+    type: git
+    url: https://github.com/ros-navigation/navigation2_tutorials.git
+    version: rolling

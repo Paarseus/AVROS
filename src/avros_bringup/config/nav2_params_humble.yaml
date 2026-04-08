@@ -138,7 +138,44 @@ local_costmap:
       height: 50
       resolution: 0.2
       robot_radius: 0.8
-      plugins: ["voxel_layer", "inflation_layer"]
+      plugins: ["voxel_layer", "semantic_segmentation_layer", "inflation_layer"]
+
+      semantic_segmentation_layer:
+        plugin: "semantic_segmentation_layer::SemanticSegmentationLayer"
+        enabled: true
+        observation_sources: camera
+        camera:
+          segmentation_topic: "/segmentation/mask"
+          confidence_topic: "/segmentation/confidence"
+          labels_topic: "/segmentation/label_info"
+          pointcloud_topic: "/camera/camera/depth/color/points"
+          observation_persistence: 0.0
+          expected_update_rate: 0.0
+          max_obstacle_distance: 8.0
+          min_obstacle_distance: 0.3
+          tile_map_decay_time: 5.0
+          visualize_tile_map: true
+          use_cost_selection: false
+          class_types: ["traversable", "intermediate", "danger"]
+          traversable:
+            classes: ["sidewalk"]
+            base_cost: 0
+            max_cost: 0
+            mark_confidence: 0
+            samples_to_max_cost: 0
+          intermediate:
+            classes: ["background"]
+            base_cost: 127
+            max_cost: 127
+            mark_confidence: 0
+            samples_to_max_cost: 0
+          danger:
+            classes: ["grass"]
+            base_cost: 254
+            max_cost: 254
+            mark_confidence: 0
+            samples_to_max_cost: 0
+            dominant_priority: false
 
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"

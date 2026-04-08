@@ -286,6 +286,26 @@ This enables seamless handoff: when webui stops publishing, timeout expires and 
 - **Goal tolerance:** 2.0 m xy, 0.5 rad yaw
 - **Datum:** 34.059270, -117.820934 (fixed in navsat.yaml, used by route graph)
 
+### Sending GPS Goals to Nav2
+
+**Always use the `/fromLL` service** — never manually convert GPS to map frame. `navsat_transform_node` provides this service and uses the exact same UTM projection as the route graph.
+
+```bash
+# Ensure RMW matches (CycloneDDS)
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+
+# Step 1: Convert GPS to map frame
+ros2 service call /fromLL robot_localization/srv/FromLL \
+  "{ll_point: {latitude: 34.058912, longitude: -117.820180, altitude: 0.0}}"
+# Returns: map_point: {x: XX.X, y: YY.Y, z: 0.0}
+
+# Step 2: Send the returned coordinates to Nav2
+ros2 action send_goal /navigate_to_pose nav2_msgs/action/NavigateToPose \
+  "{pose: {header: {frame_id: 'map'}, pose: {position: {x: <returned_x>, y: <returned_y>}}}}"
+```
+
+**IMPORTANT:** GNSS requires clear sky view — the vehicle must be **outdoors** for satellite acquisition. Indoors, the Xsens will report garbage coordinates (status -1). Wait for status 1 (SBAS) or 2 (RTK FIXED) before sending goals.
+
 ---
 
 ## Web UI (avros_webui)

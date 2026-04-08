@@ -22,6 +22,7 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from nav2_common.launch import RewrittenYaml
@@ -103,6 +104,11 @@ def generate_launch_description():
             description='Enable RealSense D455 camera'
         ),
 
+        DeclareLaunchArgument(
+            'enable_segmentation', default_value='false',
+            description='Enable semantic segmentation for road detection'
+        ),
+
         # Localization (sensors + EKF + navsat)
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -126,6 +132,19 @@ def generate_launch_description():
                 {'use_sim_time': use_sim_time},
             ],
             output='screen',
+        ),
+
+        # Semantic segmentation (road detection via camera)
+        Node(
+            package='semantic_segmentation_node',
+            executable='segmentation_node',
+            name='segmentation_node',
+            parameters=[{
+                'use_sim_time': use_sim_time,
+                'input_topic': '/camera/camera/color/image_raw',
+            }],
+            output='screen',
+            condition=IfCondition(LaunchConfiguration('enable_segmentation')),
         ),
 
         # Nav2 servers
