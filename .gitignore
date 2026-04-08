@@ -11,4 +11,4 @@ src/rtabmap_ros/
 src/xsens_mti/
 src/zed-ros2-wrapper/
 src/semantic_segmentation_layer/
-src/navigation2_tutorials/
+src/semantic_segmentation_node/

@@ -21,9 +21,9 @@ repositories:
     version: master
   semantic_segmentation_layer:
     type: git
-    url: https://github.com/kiwicampus/semantic_segmentation_layer.git
+    url: https://github.com/Paarseus/semantic_segmentation_layer.git
     version: humble
-  navigation2_tutorials:
+  semantic_segmentation_node:
     type: git
-    url: https://github.com/ros-navigation/navigation2_tutorials.git
-    version: rolling
+    url: https://github.com/Paarseus/semantic_segmentation_node.git
+    version: main
